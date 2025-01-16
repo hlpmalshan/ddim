@@ -1,0 +1,50 @@
+data:
+    dataset: "OXFORD_FLOWERS"   # Dataset name
+    image_size: 64              # Image size for resizing
+    channels: 3                 # Number of image channels (RGB)
+    logit_transform: false      # Apply logit transform
+    uniform_dequantization: false  # Enable uniform dequantization
+    gaussian_dequantization: false # Enable Gaussian dequantization
+    random_flip: true           # Enable random horizontal flip
+    rescaled: true              # Rescale images to [-1, 1]
+    num_workers: 4              # Number of data loader workers
+
+model:
+    type: "simple"              # Model type
+    in_channels: 3              # Input channels
+    out_ch: 3                   # Output channels
+    ch: 64                      # Base channel size
+    ch_mult: [1, 2, 4, 8]       # Channel multiplier for each layer
+    num_res_blocks: 2           # Number of residual blocks
+    attn_resolutions: [16, 8]   # Resolutions with attention
+    dropout: 0.1                # Dropout rate
+    var_type: fixedlarge        # Variance type
+    ema_rate: 0.999             # EMA decay rate
+    ema: True                   # Enable Exponential Moving Average
+    resamp_with_conv: True      # Use convolutional resampling
+
+diffusion:
+    beta_schedule: linear       # Beta schedule for diffusion
+    beta_start: 0.0001          # Starting beta value
+    beta_end: 0.02              # Ending beta value
+    num_diffusion_timesteps: 1000  # Number of diffusion timesteps
+
+training:
+    batch_size: 32              # Training batch size
+    n_epochs: 1000              # Number of training epochs
+    n_iters: 5000000            # Total training iterations
+    snapshot_freq: 50           # Snapshot frequency
+    #validation_freq: 2000       # Validation frequency
+
+sampling:
+    batch_size: 16              # Sampling batch size
+    last_only: True             # Only return the last timestep samples
+
+optim:
+    weight_decay: 0.000         # Weight decay for optimizer
+    optimizer: "Adam"           # Optimizer type
+    lr: 0.0002                  # Learning rate
+    beta1: 0.9                  # Beta1 for Adam
+    amsgrad: false              # Use AMSGrad variant
+    eps: 1e-8                   # Epsilon for numerical stability
+    grad_clip: 1.0              # Gradient clipping value

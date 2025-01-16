@@ -4,6 +4,7 @@ import numbers
 import torchvision.transforms as transforms
 import torchvision.transforms.functional as F
 from torchvision.datasets import CIFAR10
+from torchvision.datasets import Flowers102
 from datasets.celeba import CelebA
 from datasets.ffhq import FFHQ
 from datasets.lsun import LSUN
@@ -177,44 +178,18 @@ def get_dataset(args, config):
         dataset = Subset(dataset, train_indices)
     
     elif config.data.dataset == "OXFORD_FLOWERS":
-        flowers_url = "http://www.robots.ox.ac.uk/~vgg/data/flowers/102/102flowers.tgz"
-        labels_url = "http://www.robots.ox.ac.uk/~vgg/data/flowers/102/imagelabels.mat"
-        dataset_root = os.path.join(args.exp, "datasets", "oxford_flowers")
-
-        # Download and extract dataset if not already done
-        if not os.path.exists(os.path.join(dataset_root, "jpg")):
-            download_and_extract_archive(flowers_url, download_root=dataset_root)
-
-        # Ensure labels are also downloaded
-        if not os.path.exists(os.path.join(dataset_root, "imagelabels.mat")):
-            download_and_extract_archive(labels_url, download_root=dataset_root)
-
-        # Define transformations
-        transform = transforms.Compose(
-            [
-                transforms.Resize(config.data.image_size),
-                transforms.RandomHorizontalFlip(p=0.5) if config.data.random_flip else transforms.Identity(),
-                transforms.ToTensor(),
-            ]
+        dataset = Flowers102(
+            root=os.path.join(args.exp, "datasets", "oxford_flowers"),
+            split="train",
+            download=True,
+            transform=train_transform,
         )
-
-        dataset = ImageFolder(
-            root=os.path.join(dataset_root, "jpg"),
-            transform=transform,
+        test_dataset = Flowers102(
+            root=os.path.join(args.exp, "datasets", "oxford_flowers"),
+            split="test",
+            download=True,
+            transform=test_transform,
         )
-
-        # Split into train and test sets (90% train, 10% test)
-        num_items = len(dataset)
-        indices = list(range(num_items))
-        np.random.seed(2019)
-        np.random.shuffle(indices)
-        train_indices, test_indices = (
-            indices[: int(num_items * 0.9)],
-            indices[int(num_items * 0.9) :],
-        )
-        test_dataset = Subset(dataset, test_indices)
-        dataset = Subset(dataset, train_indices)    
-    
     else:
         dataset, test_dataset = None, None
 
