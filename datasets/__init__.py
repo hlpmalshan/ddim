@@ -5,6 +5,7 @@ import torchvision.transforms as transforms
 import torchvision.transforms.functional as F
 from torchvision.datasets import CIFAR10
 from torchvision.datasets import Flowers102
+from torchvision.datasets import OxfordIIITPet
 from datasets.celeba import CelebA
 from datasets.ffhq import FFHQ
 from datasets.lsun import LSUN
@@ -42,7 +43,10 @@ def get_dataset(args, config):
             ]
         )
         test_transform = transforms.Compose(
-            [transforms.Resize(config.data.image_size), transforms.ToTensor()]
+            [
+                transforms.Resize(config.data.image_size), 
+                transforms.ToTensor()
+            ]
         )
 
     if config.data.dataset == "CIFAR10":
@@ -59,6 +63,60 @@ def get_dataset(args, config):
             transform=test_transform,
         )
 
+    elif config.data.dataset == "OXFORD_FLOWERS":
+        dataset = Flowers102(
+            root=os.path.join(args.exp, "datasets", "oxford_flowers"),
+            split="train",
+            download=True,
+            transform=transforms.Compose(
+                    [
+                        transforms.Resize(config.data.image_size),
+                        transforms.CenterCrop(config.data.image_size),
+                        transforms.ToTensor(),
+                    ]
+                ),
+            )
+        
+        test_dataset = Flowers102(
+            root=os.path.join(args.exp, "datasets", "oxford_flowers"),
+            split="test",
+            download=True,
+            transform=transforms.Compose(
+                    [
+                        transforms.Resize(config.data.image_size),
+                        transforms.CenterCrop(config.data.image_size),
+                        transforms.ToTensor(),
+                    ]
+                ),
+        )
+    
+    elif config.data.dataset == "OXFORD_IIIT_PET":
+        dataset = OxfordIIITPet(
+            root=os.path.join(args.exp, "datasets", "oxford_pets"),
+            split="train",
+            download=True,
+            transform=transforms.Compose(
+                    [
+                        transforms.Resize(config.data.image_size),
+                        transforms.CenterCrop(config.data.image_size),
+                        transforms.ToTensor(),
+                    ]
+                ),
+            )
+        
+        test_dataset = OxfordIIITPet(
+            root=os.path.join(args.exp, "datasets", "oxford_pets"),
+            split="test",
+            download=True,
+            transform=transforms.Compose(
+                    [
+                        transforms.Resize(config.data.image_size),
+                        transforms.CenterCrop(config.data.image_size),
+                        transforms.ToTensor(),
+                    ]
+                ),
+        )
+    
     elif config.data.dataset == "CELEBA":
         cx = 89
         cy = 121
@@ -177,19 +235,6 @@ def get_dataset(args, config):
         test_dataset = Subset(dataset, test_indices)
         dataset = Subset(dataset, train_indices)
     
-    elif config.data.dataset == "OXFORD_FLOWERS":
-        dataset = Flowers102(
-            root=os.path.join(args.exp, "datasets", "oxford_flowers"),
-            split="train",
-            download=True,
-            transform=train_transform,
-        )
-        test_dataset = Flowers102(
-            root=os.path.join(args.exp, "datasets", "oxford_flowers"),
-            split="test",
-            download=True,
-            transform=test_transform,
-        )
     else:
         dataset, test_dataset = None, None
 

@@ -1,5 +1,5 @@
 data:
-    dataset: "OXFORD_FLOWERS"   # Dataset name
+    dataset: "OXFORD_IIIT_PET"  # Dataset name
     image_size: 64              # Image size for resizing
     channels: 3                 # Number of image channels (RGB)
     logit_transform: false      # Apply logit transform
