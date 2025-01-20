@@ -219,7 +219,7 @@ def main():
     logging.info("Exp comment = {}".format(args.comment))
 
     try:
-        runner = Diffusion(args, config)
+        runner = Diffusion(args, config, device=config.device)
         if args.sample:
             runner.sample()
         elif args.test:
