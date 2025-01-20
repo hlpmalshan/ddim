@@ -80,6 +80,9 @@ def parse_args_and_config():
         "--timesteps", type=int, default=1000, help="number of steps involved"
     )
     parser.add_argument(
+        "--gpu", type=int, default=1, help="id of the gpu"
+    )
+    parser.add_argument(
         "--eta",
         type=float,
         default=0.0,
@@ -182,7 +185,8 @@ def parse_args_and_config():
                         sys.exit(0)
 
     # add device
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    
+    device = torch.device(f"cuda:{args.gpu}") if torch.cuda.is_available() else torch.device("cpu")
     logging.info("Using device: {}".format(device))
     new_config.device = device
 
