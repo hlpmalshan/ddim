@@ -93,7 +93,7 @@ def get_dataset(args, config):
     elif config.data.dataset == "OXFORD_IIIT_PET":
         dataset = OxfordIIITPet(
             root=os.path.join(args.exp, "datasets", "oxford_pets"),
-            split="train",
+            split="trainval"
             download=True,
             transform=transforms.Compose(
                     [
