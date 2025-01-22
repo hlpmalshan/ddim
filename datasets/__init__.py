@@ -4,6 +4,7 @@ import numbers
 import torchvision.transforms as transforms
 import torchvision.transforms.functional as F
 from torchvision.datasets import CIFAR10
+from torchvision.datasets import CIFAR100
 from torchvision.datasets import Flowers102
 from torchvision.datasets import OxfordIIITPet
 from datasets.celeba import CelebA
@@ -63,6 +64,20 @@ def get_dataset(args, config):
             transform=test_transform,
         )
 
+    elif config.data.dataset == "CIFAR100":
+        dataset = CIFAR100(
+            os.path.join(args.exp, "datasets", "cifar100"),
+            train=True,
+            download=True,
+            transform=tran_transform,
+        )
+        test_dataset = CIFAR100(
+            os.path.join(args.exp, "datasets", "cifar100_test"),
+            train=False,
+            download=True,
+            transform=test_transform,
+        )
+    
     elif config.data.dataset == "OXFORD_FLOWERS":
         dataset = Flowers102(
             root=os.path.join(args.exp, "datasets", "oxford_flowers"),
