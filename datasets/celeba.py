@@ -36,7 +36,7 @@ class CelebA(VisionDataset):
     # right now.
     file_list = [
         # File ID                         MD5 Hash                            Filename
-        ("0B7EVK8r0v71pZjFTYXZWM3FlRnM", "00d2c5bc6d35e252742224ab0c1e8fcb", "img_align_celeba.zip"),
+        # ("0B7EVK8r0v71pZjFTYXZWM3FlRnM", "00d2c5bc6d35e252742224ab0c1e8fcb", "img_align_celeba.zip"),
         # ("0B7EVK8r0v71pbWNEUjJKdDQ3dGc", "b6cd7e93bc7a96c2dc33f819aa3ac651", "img_align_celeba_png.7z"),
         # ("0B7EVK8r0v71peklHb0pGdDl6R28", "b6cd7e93bc7a96c2dc33f819aa3ac651", "img_celeba.7z"),
         ("0B7EVK8r0v71pblRyaVFSWGxPY0U", "75e246fa4810816ffd6ee81facbd244c", "list_attr_celeba.txt"),
@@ -96,14 +96,21 @@ class CelebA(VisionDataset):
 
         with open(os.path.join(self.root, self.base_folder, "list_attr_celeba.txt"), "r") as f:
             self.attr = pandas.read_csv(f, sep='\s+', header=1)
+            
+        with open(os.path.join(self.root, self.base_folder, "celebahq256_paths.txt"), "r") as f:
+            splits = pandas.read_csv(f, sep='\s+', header=None, index_col=0)
 
-        mask = (splits[1] == split)
-        self.filename = splits[mask].index.values
-        self.identity = torch.as_tensor(self.identity[mask].values)
-        self.bbox = torch.as_tensor(self.bbox[mask].values)
-        self.landmarks_align = torch.as_tensor(self.landmarks_align[mask].values)
-        self.attr = torch.as_tensor(self.attr[mask].values)
-        self.attr = (self.attr + 1) // 2  # map from {-1, 1} to {0, 1}
+
+        # mask = (splits[1] == split)
+        # self.filename =  splits[mask].index.values
+        with open(os.path.join(self.root, self.base_folder, "celebahq256_paths.txt"), "r") as f:
+            self.filename = [line.strip() for line in f if line.strip()]
+
+        # self.identity = torch.as_tensor(self.identity[mask].values)
+        # self.bbox = torch.as_tensor(self.bbox[mask].values)
+        # self.landmarks_align = torch.as_tensor(self.landmarks_align[mask].values)
+        # self.attr = torch.as_tensor(self.attr[mask].values)
+        # self.attr = (self.attr + 1) // 2  # map from {-1, 1} to {0, 1}
 
     def _check_integrity(self):
         for (_, md5, filename) in self.file_list:
@@ -115,7 +122,7 @@ class CelebA(VisionDataset):
                 return False
 
         # Should check a hash of the images
-        return os.path.isdir(os.path.join(self.root, self.base_folder, "img_align_celeba"))
+        return os.path.isdir(os.path.join(self.root, self.base_folder, "celebahq256_imgs"))
 
     def download(self):
         import zipfile
@@ -127,25 +134,25 @@ class CelebA(VisionDataset):
         for (file_id, md5, filename) in self.file_list:
             download_file_from_google_drive(file_id, os.path.join(self.root, self.base_folder), filename, md5)
 
-        with zipfile.ZipFile(os.path.join(self.root, self.base_folder, "img_align_celeba.zip"), "r") as f:
+        with zipfile.ZipFile(os.path.join(self.root, self.base_folder, "celebahq256-images-only.zip"), "r") as f:
             f.extractall(os.path.join(self.root, self.base_folder))
 
     def __getitem__(self, index):
-        X = PIL.Image.open(os.path.join(self.root, self.base_folder, "img_align_celeba", self.filename[index]))
+        X = PIL.Image.open(os.path.join(self.root, self.base_folder, "celebahq256_imgs", self.filename[index]))
 
-        target = []
-        for t in self.target_type:
-            if t == "attr":
-                target.append(self.attr[index, :])
-            elif t == "identity":
-                target.append(self.identity[index, 0])
-            elif t == "bbox":
-                target.append(self.bbox[index, :])
-            elif t == "landmarks":
-                target.append(self.landmarks_align[index, :])
-            else:
-                raise ValueError("Target type \"{}\" is not recognized.".format(t))
-        target = tuple(target) if len(target) > 1 else target[0]
+        target = ""
+        # for t in self.target_type:
+        #     if t == "attr":
+        #         target.append(self.attr[index, :])
+        #     elif t == "identity":
+        #         target.append(self.identity[index, 0])
+        #     elif t == "bbox":
+        #         target.append(self.bbox[index, :])
+        #     elif t == "landmarks":
+        #         target.append(self.landmarks_align[index, :])
+        #     else:
+        #         raise ValueError("Target type \"{}\" is not recognized.".format(t))
+        # target = tuple(target) if len(target) > 1 else target[0]
 
         if self.transform is not None:
             X = self.transform(X)
@@ -156,7 +163,7 @@ class CelebA(VisionDataset):
         return X, target
 
     def __len__(self):
-        return len(self.attr)
+        return len(self.filename)
 
     def extra_repr(self):
         lines = ["Target type: {target_type}", "Split: {split}"]
