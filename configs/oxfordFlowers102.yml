@@ -7,21 +7,22 @@ data:
     gaussian_dequantization: false # Enable Gaussian dequantization
     random_flip: true           # Enable random horizontal flip
     rescaled: true              # Rescale images to [-1, 1]
-    num_workers: 4              # Number of data loader workers
+    num_workers: 8              # Number of data loader workers
 
 model:
-    type: "simple"              # Model type
+    type: "iso"              # Model type
     in_channels: 3              # Input channels
     out_ch: 3                   # Output channels
     ch: 64                      # Base channel size
     ch_mult: [1, 2, 4, 8]       # Channel multiplier for each layer
     num_res_blocks: 2           # Number of residual blocks
-    attn_resolutions: [16, 8]   # Resolutions with attention
-    dropout: 0.1                # Dropout rate
+    attn_resolutions: []   # Resolutions with attention
+    dropout: 0.1                # Dropout rateqd
     var_type: fixedlarge        # Variance type
     ema_rate: 0.999             # EMA decay rate
     ema: True                   # Enable Exponential Moving Average
     resamp_with_conv: True      # Use convolutional resampling
+    save_statistics: True       # if True: save batch mean and standard deviation in .csv 
 
 diffusion:
     beta_schedule: linear       # Beta schedule for diffusion
@@ -30,20 +31,21 @@ diffusion:
     num_diffusion_timesteps: 1000  # Number of diffusion timesteps
 
 training:
-    batch_size: 32              # Training batch size
-    n_epochs: 1000              # Number of training epochs
-    n_iters: 5000000            # Total training iterations
-    snapshot_freq: 50           # Snapshot frequency
+    batch_size: 4             # Training batch size
+    n_epochs: 1600              # Number of training epochs
+    n_iters: 408000            # Total training iterations
+    snapshot_freq: 20400          # Snapshot frequency
     #validation_freq: 2000       # Validation frequency
 
 sampling:
-    batch_size: 16              # Sampling batch size
+    batch_size: 8              # Sampling batch size
     last_only: True             # Only return the last timestep samples
+    ckpt_id: 192000
 
 optim:
-    weight_decay: 0.000         # Weight decay for optimizer
+    weight_decay: 0.0000        # Weight decay for optimizer
     optimizer: "Adam"           # Optimizer type
-    lr: 0.0002                  # Learning rate
+    lr: 0.00005                  # Learning rate
     beta1: 0.9                  # Beta1 for Adam
     amsgrad: false              # Use AMSGrad variant
     eps: 1.0e-8                   # Epsilon for numerical stability

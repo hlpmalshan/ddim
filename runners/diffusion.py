@@ -7,6 +7,7 @@ import numpy as np
 import tqdm
 import torch
 import torch.utils.data as data
+import pandas as pd
 
 from models.diffusion import Model
 from models.ema import EMAHelper
@@ -56,7 +57,45 @@ def get_beta_schedule(beta_schedule, *, beta_start, beta_end, num_diffusion_time
         raise NotImplementedError(beta_schedule)
     assert betas.shape == (num_diffusion_timesteps,)
     return betas
+'''
+def update_csv(csv_path, mean_array, std_array, filled_len, stride=100):
 
+    steps = [1] + [k * stride for k in range(1, filled_len)]
+    df = pd.DataFrame({
+        "step": steps[:filled_len],
+        "mean": mean_array[:filled_len],
+        "standard_deviation": std_array[:filled_len],
+    })
+    if os.path.exists(csv_path):
+        last_step = pd.read_csv(csv_path, usecols=["step"])["step"].max()
+    else:
+        last_step = -1
+    new = df[df["step"] > last_step]
+    if not new.empty:
+        mode = "a" if os.path.exists(csv_path) else "w"
+        new.to_csv(csv_path, mode=mode, header=not os.path.exists(csv_path), index=False)
+    return len(new)
+    '''
+
+def update_csv(csv_path, step, mean_val, std_val):
+    """Append a single row (step, mean, std) to the CSV, safely avoiding duplicates."""
+    if os.path.exists(csv_path):
+        last_step = pd.read_csv(csv_path, usecols=["step"])["step"].max()
+    else:
+        last_step = -1
+
+    if step <= last_step:  # nothing new to add
+        return 0
+
+    df = pd.DataFrame([{
+        "step": step,
+        "mean": mean_val,
+        "standard_deviation": std_val
+    }])
+
+    mode = "a" if os.path.exists(csv_path) else "w"
+    df.to_csv(csv_path, mode=mode, header=not os.path.exists(csv_path), index=False)
+    return 1
 
 class Diffusion(object):
     def __init__(self, args, config, device=None):
@@ -64,12 +103,11 @@ class Diffusion(object):
         self.config = config
         if device is None:
             device = (
-                torch.device("cuda")
+                torch.device(f"cuda:{self.config.device}")
                 if torch.cuda.is_available()
                 else torch.device("cpu")
             )
         self.device = device
-
         self.model_var_type = config.model.var_type
         betas = get_beta_schedule(
             beta_schedule=config.diffusion.beta_schedule,
@@ -119,6 +157,8 @@ class Diffusion(object):
             ema_helper = None
 
         start_epoch, step = 0, 0
+        batch_norm_mean_list = np.zeros(config.training.n_iters, dtype=float)
+        batch_norm_standard_deviation_list = np.zeros(config.training.n_iters, dtype=float)
         if self.args.resume_training:
             states = torch.load(os.path.join(self.args.log_path, "ckpt.pth"))
             model.load_state_dict(states[0])
@@ -149,12 +189,12 @@ class Diffusion(object):
                     low=0, high=self.num_timesteps, size=(n // 2 + 1,)
                 ).to(self.device)
                 t = torch.cat([t, self.num_timesteps - t - 1], dim=0)[:n]
-                loss = loss_registry[config.model.type](model, x, t, e, b)
-
+                loss, batch_norm_mean, batch_norm_standard_deviation = loss_registry[config.model.type](model, x, t, e, b)
+                
                 tb_logger.add_scalar("loss", loss, global_step=step)
 
                 logging.info(
-                    f"step: {step}, loss: {loss.item()}, data time: {data_time / (i+1)}"
+                    f"step: {step}, epoch : {epoch},  loss: {loss.item()}, data time: {data_time / (i+1)}"
                 )
 
                 optimizer.zero_grad()
@@ -186,7 +226,34 @@ class Diffusion(object):
                         os.path.join(self.args.log_path, "ckpt_{}.pth".format(step)),
                     )
                     torch.save(states, os.path.join(self.args.log_path, "ckpt.pth"))
-
+                
+                if config.model.save_statistics and (step == 1 or step % 100 == 0):
+                        '''
+                        if step == 1:
+                            indedx = 0
+                        else:
+                            index = step // 100
+                        
+                        batch_norm_mean_list[index] = batch_norm_mean
+                        batch_norm_standard_deviation_list[index] = batch_norm_standard_deviation
+                        
+                        filled_len = index + 1
+                        appended = update_csv(os.path.join(self.args.log_path, "statistics.csv"), 
+                                              batch_norm_mean_list, 
+                                              batch_norm_standard_deviation_list,
+                                              filled_len, 
+                                              stride=100)
+                        print(f"Appended {appended} new rows (up to step {step})")
+                        '''
+                        appended = update_csv(
+                            os.path.join(self.args.log_path, "statistics.csv"),
+                            step,
+                            batch_norm_mean.item(),
+                            batch_norm_standard_deviation.item()
+                        )
+                        if appended > 0:
+                            print(f"Saved statistics at step {step}")
+                      
                 data_start = time.time()
 
     def sample(self):
@@ -206,7 +273,7 @@ class Diffusion(object):
                     map_location=self.config.device,
                 )
             model = model.to(self.device)
-            model = torch.nn.DataParallel(model)
+            # model = torch.nn.DataParallel(model)
             model.load_state_dict(states[0], strict=True)
 
             if self.config.model.ema:
@@ -228,7 +295,7 @@ class Diffusion(object):
             print("Loading checkpoint {}".format(ckpt))
             model.load_state_dict(torch.load(ckpt, map_location=self.device))
             model.to(self.device)
-            model = torch.nn.DataParallel(model)
+            # model = torch.nn.DataParallel(model)
 
         model.eval()
 
@@ -245,7 +312,7 @@ class Diffusion(object):
         config = self.config
         img_id = len(glob.glob(f"{self.args.image_folder}/*"))
         print(f"starting from image {img_id}")
-        total_n_samples = 50000
+        total_n_samples = 8200
         n_rounds = (total_n_samples - img_id) // config.sampling.batch_size
 
         with torch.no_grad():
