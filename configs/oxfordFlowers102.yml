@@ -10,7 +10,7 @@ data:
     num_workers: 8              # Number of data loader workers
 
 model:
-    type: "iso"              # Model type
+    type: "simple"              # Model type
     in_channels: 3              # Input channels
     out_ch: 3                   # Output channels
     ch: 64                      # Base channel size
@@ -40,7 +40,7 @@ training:
 sampling:
     batch_size: 8              # Sampling batch size
     last_only: True             # Only return the last timestep samples
-    ckpt_id: 192000
+    ckpt_id: 244800
 
 optim:
     weight_decay: 0.0000        # Weight decay for optimizer
