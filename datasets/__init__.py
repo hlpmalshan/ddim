@@ -3,6 +3,7 @@ import torch
 import numbers
 import torchvision.transforms as transforms
 import torchvision.transforms.functional as F
+from torchvision.datasets import MNIST
 from torchvision.datasets import CIFAR10
 from torchvision.datasets import CIFAR100
 from torchvision.datasets import Flowers102
@@ -131,6 +132,50 @@ def get_dataset(args, config):
                     ]
                 ),
         )
+    
+    # Inside get_dataset function, add this before the final else: dataset, test_dataset = None, None
+    elif config.data.dataset == "MNIST":
+        if config.data.random_flip:
+            train_transform = transforms.Compose([
+                transforms.Pad(2),  # Pad 28x28 to 32x32
+                transforms.Resize(config.data.image_size),  # Ensure 32x32
+                transforms.RandomHorizontalFlip(p=0.5),  # Unlikely for MNIST, but respect config
+                transforms.ToTensor(),
+            ])
+            test_transform = transforms.Compose([
+                transforms.Pad(2),
+                transforms.Resize(config.data.image_size),
+                transforms.ToTensor(),
+            ])
+        else:
+            train_transform = test_transform = transforms.Compose([
+                transforms.Pad(2),  # Pad 28x28 to 32x32
+                transforms.Resize(config.data.image_size),  # Ensure 32x32
+                transforms.ToTensor(),
+            ])
+        
+        dataset = MNIST(
+            root=os.path.join(args.exp, "datasets", "mnist"),
+            train=True,
+            download=True,
+            transform=train_transform,
+        )
+        test_dataset = MNIST(
+            root=os.path.join(args.exp, "datasets", "mnist_test"),
+            train=False,
+            download=True,
+            transform=test_transform,
+        )
+        
+        # Filter digits if specified
+        selected_digits = getattr(config.data, 'selected_digits', None)
+        if selected_digits:
+            labels = [label for _, label in dataset]
+            indices = [i for i, l in enumerate(labels) if l in selected_digits]
+            dataset = Subset(dataset, indices)
+            test_labels = [label for _, label in test_dataset]
+            test_indices = [i for i, l in enumerate(test_labels) if l in selected_digits]
+            test_dataset = Subset(test_dataset, test_indices)
     
     elif config.data.dataset == "CELEBA":
         cx = 89

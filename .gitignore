@@ -2,3 +2,10 @@
 __pycache__/
 ddim_celeba
 ddim_test
+ddim_cifar10
+ddim_ox_flow
+ddim_ox_pet
+data
+ddim_mnist
+ddim_mnist_dig1
+PCA_Plots

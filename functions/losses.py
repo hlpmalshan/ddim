@@ -32,11 +32,12 @@ def noise_estimation_loss_iso(model,
     if keepdim:
         base_loss = (e - output).square().mean(dim=(1, 2, 3))
         iso_loss =  (1 - output.square().mean(dim=(1, 2, 3))).square()
-        return base_loss  + 0.01 * iso_loss
+        return base_loss  + 0.3 * iso_loss
     else:
         base_loss = (e - output).square().mean(dim=(1, 2, 3)).mean(dim=0)
-        iso_loss = (1 - output.square().mean(dim=0).mean(dim=(0, 1, 2))).square()
-        return base_loss + 0.01 * iso_loss, batch_norm_mean, batch_norm_standard_deviation
+        # iso_loss = (1 - output.square().mean(dim=0).mean(dim=(0, 1, 2))).square()
+        iso_loss = (1 - output.flatten().square().mean()).square()
+        return base_loss + 0.3 * iso_loss, batch_norm_mean, batch_norm_standard_deviation
 
 loss_registry = {
     'simple': noise_estimation_loss,

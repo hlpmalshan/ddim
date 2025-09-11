@@ -40,7 +40,7 @@ training:
 sampling:
     batch_size: 8              # Sampling batch size
     last_only: True             # Only return the last timestep samples
-    ckpt_id: 192000
+    ckpt_id: 501400
 
 optim:
     weight_decay: 0.000         # Weight decay for optimizer
