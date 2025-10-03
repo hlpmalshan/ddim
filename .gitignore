@@ -2,6 +2,9 @@
 __pycache__/
 ddim_celeba
 ddim_test
+ddim_mnist_dig0
+ddim_mnist_dig1
+ddim_mnsit_dig2
 ddim_cifar10
 ddim_ox_flow
 ddim_ox_pet
@@ -9,3 +12,4 @@ data
 ddim_mnist
 ddim_mnist_dig1
 PCA_Plots
+*.log

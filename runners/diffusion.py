@@ -189,7 +189,7 @@ class Diffusion(object):
                     low=0, high=self.num_timesteps, size=(n // 2 + 1,)
                 ).to(self.device)
                 t = torch.cat([t, self.num_timesteps - t - 1], dim=0)[:n]
-                loss, batch_norm_mean, batch_norm_standard_deviation = loss_registry[config.model.type](model, x, t, e, b)
+                loss, batch_norm_mean, batch_norm_standard_deviation = loss_registry[config.model.type](model, x, t, e, b, reg = args.reg)
                 
                 tb_logger.add_scalar("loss", loss, global_step=step)
 
@@ -312,7 +312,7 @@ class Diffusion(object):
         config = self.config
         img_id = len(glob.glob(f"{self.args.image_folder}/*"))
         print(f"starting from image {img_id}")
-        total_n_samples = 6742
+        total_n_samples = config.sampling.n_samples
         n_rounds = (total_n_samples - img_id) // config.sampling.batch_size
 
         with torch.no_grad():

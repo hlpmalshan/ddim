@@ -8,7 +8,7 @@ data:
     random_flip: false  # No flipping for MNIST digits, as orientation matters
     rescaled: true  # Rescale pixel values to [-1, 1], standard for diffusion models
     num_workers: 16  # Same as CIFAR10, reasonable for data loading
-    selected_digits: [1]  # Train only on digit 1, as specified
+    selected_digits: []  # Train only on digit 1, as specified
 
 model:
     type: "iso"  # Changed from "iso" to match original MNIST config, simpler architecture suits MNIST
@@ -23,7 +23,7 @@ model:
     ema_rate: 0.9999  # Same as CIFAR10, good for stable training
     ema: True  # Same as CIFAR10, improves model performance
     resamp_with_conv: True  # Same as CIFAR10, standard for diffusion models
-    save_statistics: True  # Save batch mean and std, consistent with both configs
+    save_statistics: False  # Save batch mean and std, consistent with both configs
 
 diffusion:
     beta_schedule: linear  # Same as CIFAR10, simple and effective
@@ -33,7 +33,7 @@ diffusion:
 
 training:
     batch_size: 64  # Increased from 32, but smaller than CIFAR10’s 128 due to smaller dataset
-    n_epochs: 500  # Reduced from 1000, single-digit dataset is smaller and needs less training
+    n_epochs: 200  # Reduced from 1000, single-digit dataset is smaller and needs less training
     n_iters: 50000  # Reduced proportionally to dataset size and epochs
     snapshot_freq: 10000  # Adjusted for fewer iterations, saves model periodically
     # validation_freq: 2000  # Uncomment if validation is needed, same as CIFAR10
@@ -41,6 +41,8 @@ training:
 sampling:
     batch_size: 64  # Same as CIFAR10, good for generating samples
     last_only: True  # Same as CIFAR10, focuses on final samples
+    n_samples: 6784
+    ckpt_id: 10000
 
 optim:
     weight_decay: 0.000  # Same as CIFAR10, no weight decay needed

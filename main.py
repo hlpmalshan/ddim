@@ -40,6 +40,9 @@ def parse_args_and_config():
         default="info",
         help="Verbose level: info | debug | warning | critical",
     )
+    parser.add_argument(
+        "--reg", type=float, required=True, help="Iso Reg", default=0.0
+    )
     parser.add_argument("--test", action="store_true", help="Whether to test the model")
     parser.add_argument(
         "--sample",

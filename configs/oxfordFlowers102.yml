@@ -41,6 +41,7 @@ sampling:
     batch_size: 8              # Sampling batch size
     last_only: True             # Only return the last timestep samples
     ckpt_id: 408000
+    n_samples: 8200
 
 optim:
     weight_decay: 0.0000        # Weight decay for optimizer
