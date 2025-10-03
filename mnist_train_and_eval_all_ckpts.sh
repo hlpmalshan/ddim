@@ -9,7 +9,7 @@ shopt -s nullglob
 
 # -------- Configurable knobs --------
 # Regularization values to sweep
-reg_values=(0.0 0.3)
+reg_values=(0.9)
 
 # Base config to use for training/sampling (relative to configs/)
 BASE_CONFIG="mnist.yml"
@@ -18,13 +18,14 @@ BASE_CONFIG="mnist.yml"
 EXP_ROOT="ddim_mnist"      # where logs/ and image_samples/ live
 DATA_ROOT="ddim_mnist"     # where datasets/ live for evaluation
 
-# Single-GPU settings
+# Single-GPU settings (used when DISTRIBUTED=false)
 GPU_ID=0
 
 # Multi-GPU (DDP) toggle and settings
-# Set DISTRIBUTED=true to use torchrun; otherwise plain python is used.
 DISTRIBUTED=${DISTRIBUTED:-false}
-NPROC_PER_NODE=${NPROC_PER_NODE:-2}
+GPUS=${GPUS:-}
+NPROC_PER_NODE=${NPROC_PER_NODE:-0}
+MASTER_PORT=${MASTER_PORT:-29501}
 DIST_BACKEND=${DIST_BACKEND:-nccl}
 
 # Training params (mirrors your other script)
@@ -56,13 +57,28 @@ make_cfg_with_ckpt() {
   ' "configs/${in_rel}" > "configs/${out_rel}"
 }
 
-# Unified launcher for main.py (training or sampling)
+# Launcher helper (switches between single GPU and DDP)
 run_main() {
   if [ "$DISTRIBUTED" = true ]; then
-    # torchrun sets env vars and spawns processes; pass --distributed for clarity
-    TORCH_COMMAND=(torchrun --nproc_per_node="$NPROC_PER_NODE" main.py --distributed)
+    if [ -n "$GPUS" ]; then
+      export CUDA_VISIBLE_DEVICES="$GPUS"
+      if [ "${NPROC_PER_NODE}" -le 0 ]; then
+        IFS=',' read -r -a _gpu_array <<< "$GPUS"
+        NPROC_PER_NODE=${#_gpu_array[@]}
+      fi
+    fi
+    if [ "${NPROC_PER_NODE}" -le 0 ]; then
+      echo "[WARN] NPROC_PER_NODE not set; defaulting to 1"
+      NPROC_PER_NODE=1
+    fi
+    export OMP_NUM_THREADS=${OMP_NUM_THREADS:-1}
+    export NCCL_DEBUG=${NCCL_DEBUG:-WARN}
+    export NCCL_IB_DISABLE=${NCCL_IB_DISABLE:-1}
     export DIST_BACKEND
-    "${TORCH_COMMAND[@]}" "$@"
+    torchrun --standalone \
+      --master_port="$MASTER_PORT" \
+      --nproc_per_node="$NPROC_PER_NODE" \
+      main.py --distributed "$@"
   else
     python main.py "$@" --gpu "$GPU_ID"
   fi

@@ -7,6 +7,9 @@ import numpy as np
 import tqdm
 import torch
 import torch.utils.data as data
+import torch.distributed as dist
+from torch.utils.data.distributed import DistributedSampler
+from torch.nn.parallel import DistributedDataParallel as DDP
 import pandas as pd
 
 from models.diffusion import Model
@@ -135,18 +138,32 @@ class Diffusion(object):
 
     def train(self):
         args, config = self.args, self.config
-        tb_logger = self.config.tb_logger
+        tb_logger = getattr(self.config, "tb_logger", None)
+        is_distributed = bool(getattr(self.config, "distributed", False))
+        rank = getattr(self.config, "rank", 0)
+        local_rank = getattr(self.config, "local_rank", 0)
+        world_size = getattr(self.config, "world_size", 1)
+        is_main_process = (not is_distributed) or (rank == 0)
+
         dataset, test_dataset = get_dataset(args, config)
+        train_sampler = (
+            DistributedSampler(dataset, num_replicas=world_size, rank=rank, shuffle=True)
+            if is_distributed
+            else None
+        )
         train_loader = data.DataLoader(
             dataset,
             batch_size=config.training.batch_size,
-            shuffle=True,
+            shuffle=(not is_distributed),
+            sampler=train_sampler,
             num_workers=config.data.num_workers,
+            pin_memory=torch.cuda.is_available(),
         )
         model = Model(config)
 
         model = model.to(self.device)
-        #model = torch.nn.DataParallel(model)
+        if is_distributed:
+            model = DDP(model, device_ids=[local_rank], output_device=local_rank)
 
         optimizer = get_optimizer(self.config, model.parameters())
 
@@ -160,8 +177,12 @@ class Diffusion(object):
         batch_norm_mean_list = np.zeros(config.training.n_iters, dtype=float)
         batch_norm_standard_deviation_list = np.zeros(config.training.n_iters, dtype=float)
         if self.args.resume_training:
-            states = torch.load(os.path.join(self.args.log_path, "ckpt.pth"))
-            model.load_state_dict(states[0])
+            states = torch.load(
+                os.path.join(self.args.log_path, "ckpt.pth"),
+                map_location=self.device,
+            )
+            model_to_load = model.module if isinstance(model, DDP) else model
+            model_to_load.load_state_dict(states[0])
 
             states[1]["param_groups"][0]["eps"] = self.config.optim.eps
             optimizer.load_state_dict(states[1])
@@ -171,6 +192,8 @@ class Diffusion(object):
                 ema_helper.load_state_dict(states[4])
 
         for epoch in range(start_epoch, self.config.training.n_epochs):
+            if is_distributed and train_sampler is not None:
+                train_sampler.set_epoch(epoch)
             data_start = time.time()
             data_time = 0
             for i, (x, y) in enumerate(train_loader):
@@ -190,12 +213,20 @@ class Diffusion(object):
                 ).to(self.device)
                 t = torch.cat([t, self.num_timesteps - t - 1], dim=0)[:n]
                 loss, batch_norm_mean, batch_norm_standard_deviation = loss_registry[config.model.type](model, x, t, e, b, reg = args.reg)
-                
-                tb_logger.add_scalar("loss", loss, global_step=step)
 
-                logging.info(
-                    f"step: {step}, epoch : {epoch},  loss: {loss.item()}, data time: {data_time / (i+1)}"
-                )
+                reduced_loss = loss.detach()
+                if is_distributed:
+                    reduced_loss = reduced_loss.clone()
+                    dist.all_reduce(reduced_loss, op=dist.ReduceOp.SUM)
+                    reduced_loss /= world_size
+
+                if tb_logger is not None and is_main_process:
+                    tb_logger.add_scalar("loss", reduced_loss.item(), global_step=step)
+
+                if is_main_process:
+                    logging.info(
+                        f"step: {step}, epoch : {epoch},  loss: {reduced_loss.item()}, data time: {data_time / (i+1)}"
+                    )
 
                 optimizer.zero_grad()
                 loss.backward()
@@ -211,9 +242,10 @@ class Diffusion(object):
                 if self.config.model.ema:
                     ema_helper.update(model)
 
-                if step % self.config.training.snapshot_freq == 0 or step == 1:
+                if (step % self.config.training.snapshot_freq == 0 or step == 1) and is_main_process:
+                    model_to_save = model.module if isinstance(model, DDP) else model
                     states = [
-                        model.state_dict(),
+                        model_to_save.state_dict(),
                         optimizer.state_dict(),
                         epoch,
                         step,
@@ -227,7 +259,7 @@ class Diffusion(object):
                     )
                     torch.save(states, os.path.join(self.args.log_path, "ckpt.pth"))
                 
-                if config.model.save_statistics and (step == 1 or step % 100 == 0):
+                if is_main_process and config.model.save_statistics and (step == 1 or step % 100 == 0):
                         '''
                         if step == 1:
                             indedx = 0
@@ -257,6 +289,10 @@ class Diffusion(object):
                 data_start = time.time()
 
     def sample(self):
+        if getattr(self.config, "distributed", False):
+            if dist.is_available() and dist.is_initialized() and dist.get_rank() != 0:
+                return
+
         model = Model(self.config)
 
         if not self.args.use_pretrained:
@@ -273,7 +309,6 @@ class Diffusion(object):
                     map_location=self.config.device,
                 )
             model = model.to(self.device)
-            # model = torch.nn.DataParallel(model)
             model.load_state_dict(states[0], strict=True)
 
             if self.config.model.ema:
@@ -295,7 +330,6 @@ class Diffusion(object):
             print("Loading checkpoint {}".format(ckpt))
             model.load_state_dict(torch.load(ckpt, map_location=self.device))
             model.to(self.device)
-            # model = torch.nn.DataParallel(model)
 
         model.eval()
 

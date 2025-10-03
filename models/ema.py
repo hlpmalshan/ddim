@@ -1,4 +1,5 @@
 import torch.nn as nn
+from torch.nn.parallel import DistributedDataParallel as DDP
 
 
 class EMAHelper(object):
@@ -7,14 +8,14 @@ class EMAHelper(object):
         self.shadow = {}
 
     def register(self, module):
-        if isinstance(module, nn.DataParallel):
+        if isinstance(module, (nn.DataParallel, DDP)):
             module = module.module
         for name, param in module.named_parameters():
             if param.requires_grad:
                 self.shadow[name] = param.data.clone()
 
     def update(self, module):
-        if isinstance(module, nn.DataParallel):
+        if isinstance(module, (nn.DataParallel, DDP)):
             module = module.module
         for name, param in module.named_parameters():
             if param.requires_grad:
@@ -22,19 +23,21 @@ class EMAHelper(object):
                     1. - self.mu) * param.data + self.mu * self.shadow[name].data
 
     def ema(self, module):
-        if isinstance(module, nn.DataParallel):
+        if isinstance(module, (nn.DataParallel, DDP)):
             module = module.module
         for name, param in module.named_parameters():
             if param.requires_grad:
                 param.data.copy_(self.shadow[name].data)
 
     def ema_copy(self, module):
-        if isinstance(module, nn.DataParallel):
+        if isinstance(module, (nn.DataParallel, DDP)):
             inner_module = module.module
             module_copy = type(inner_module)(
-                inner_module.config).to(inner_module.config.device)
+                inner_module.config
+            ).to(inner_module.config.device)
             module_copy.load_state_dict(inner_module.state_dict())
-            module_copy = nn.DataParallel(module_copy)
+            if isinstance(module, nn.DataParallel):
+                module_copy = nn.DataParallel(module_copy)
         else:
             module_copy = type(module)(module.config).to(module.config.device)
             module_copy.load_state_dict(module.state_dict())
