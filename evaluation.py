@@ -81,6 +81,18 @@ def main(real_dir, gen_dir, batch_size=32, device='cuda:1' if torch.cuda.is_avai
     clean_image_dir(real_dir)
     clean_image_dir(gen_dir)
 
+    # Ensure equal number of images in both dirs
+    real_files = sorted(glob.glob(os.path.join(real_dir, "*")))
+    gen_files = sorted(glob.glob(os.path.join(gen_dir, "*")))
+    if len(gen_files) > len(real_files):
+        gen_files = gen_files[:len(real_files)]
+        # optionally remove the extras from disk so following code sees equal sets
+        for f in sorted(glob.glob(os.path.join(gen_dir, "*")))[len(real_files):]:
+            os.remove(f)
+    
+    if len(real_files) > len(gen_files):
+        real_files = real_files[:len(gen_files)]
+    
     print("[Preparing resized copies for FID/IS]")
     real_tmp = prepare_resized_copy(real_dir)
     gen_tmp = prepare_resized_copy(gen_dir)
