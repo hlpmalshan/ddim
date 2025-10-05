@@ -1,6 +1,6 @@
 data:
     dataset: "CELEBA"
-    image_size: 256
+    image_size: 64
     channels: 3
     logit_transform: false
     uniform_dequantization: false
@@ -10,7 +10,7 @@ data:
     num_workers: 4
 
 model:
-    type: "simple"
+    type: "iso"
     in_channels: 3
     out_ch: 3
     ch: 128
@@ -31,10 +31,10 @@ diffusion:
     num_diffusion_timesteps: 1000
 
 training:
-    batch_size: 64
-    n_epochs: 1324
+    batch_size: 128
+    n_epochs: 1258
     n_iters: 500000
-    snapshot_freq: 25000
+    snapshot_freq: 20000
     validation_freq: 20000
 
 sampling:

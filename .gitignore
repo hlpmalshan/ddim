@@ -1,6 +1,7 @@
 .vscode
 __pycache__/
 ddim_celeba
+ddim_celebaHQ
 ddim_test
 ddim_mnist_dig0
 ddim_mnist_dig1
