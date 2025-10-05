@@ -179,12 +179,15 @@ from prdc import compute_prdc
 
 # ------------------------- Utilities -------------------------
 
-def load_mnist_digit(image_path: str, label_path: str, digit: int) -> np.ndarray:
+def load_mnist_digit(image_path: str, label_path: str, digit: int|None) -> np.ndarray:
     """Return MNIST images of a given digit as uint8 arrays [N,28,28]."""
     imgs = idx2numpy.convert_from_file(image_path)    # [N,28,28], uint8
     labels = idx2numpy.convert_from_file(label_path)  # [N], uint8
-    sel = np.where(labels == digit)[0]
-    return imgs[sel]
+    if digit != None:
+        sel = np.where(labels == digit)[0]
+        return imgs[sel]
+    else:
+        return imgs
 
 def pad_to_32(img28: np.ndarray) -> np.ndarray:
     """Pad a 28×28 uint8 grayscale image to 32×32 with 2-px zero border."""
@@ -291,8 +294,9 @@ def main(
     dl_real = DataLoader(ds_real, batch_size=batch_size, shuffle=False, num_workers=0)
     dl_gen  = DataLoader(ds_gen,  batch_size=batch_size, shuffle=False, num_workers=0)
 
-    real_feat = collect_flat_features(dl_real)  # [N,1024]
-    gen_feat  = collect_flat_features(dl_gen)   # [M,1024]
+    num_feat = 10000
+    real_feat = collect_flat_features(dl_real)[:num_feat]  # [N,1024]
+    gen_feat  = collect_flat_features(dl_gen)[:num_feat]   # [M,1024]
     prdc = compute_prdc(real_features=real_feat, fake_features=gen_feat, nearest_k=nearest_k)
 
     # --- Output ---

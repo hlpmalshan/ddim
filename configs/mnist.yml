@@ -15,7 +15,7 @@ model:
     in_channels: 1  # Single channel for grayscale
     out_ch: 1  # Single channel output
     ch: 64  # Reduced from 128, MNIST digits are simpler than CIFAR10 images
-    ch_mult: [1, 2, 2]  # Simplified from [1, 2, 2, 2], reduces model capacity for single-digit task
+    ch_mult: [1, 2, 2, 2]  # Simplified from [1, 2, 2, 2], reduces model capacity for single-digit task
     num_res_blocks: 2  # Reduced from 3, sufficient for simpler MNIST patterns
     attn_resolutions: [16]  # Simplified, attention at 16x16 is enough for 32x32 images
     dropout: 0.1  # Same as CIFAR10, reasonable for regularization
@@ -41,7 +41,7 @@ training:
 sampling:
     batch_size: 64  # Same as CIFAR10, good for generating samples
     last_only: True  # Same as CIFAR10, focuses on final samples
-    n_samples: 6784
+    n_samples: 10050
     ckpt_id: 10000
 
 optim:

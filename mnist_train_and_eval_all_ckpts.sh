@@ -9,7 +9,7 @@ shopt -s nullglob
 
 # -------- Configurable knobs --------
 # Regularization values to sweep
-reg_values=(0.9)
+reg_values=(0.0 0.3)
 
 # Base config to use for training/sampling (relative to configs/)
 BASE_CONFIG="mnist.yml"
@@ -19,7 +19,7 @@ EXP_ROOT="ddim_mnist"      # where logs/ and image_samples/ live
 DATA_ROOT="ddim_mnist"     # where datasets/ live for evaluation
 
 # Single-GPU settings (used when DISTRIBUTED=false)
-GPU_ID=0
+GPU_ID=1
 
 # Multi-GPU (DDP) toggle and settings
 DISTRIBUTED=${DISTRIBUTED:-false}

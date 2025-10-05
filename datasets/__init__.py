@@ -10,6 +10,7 @@ from torchvision.datasets import Flowers102
 from torchvision.datasets import OxfordIIITPet
 from datasets.celeba import CelebA
 from datasets.ffhq import FFHQ
+from datasets.celebahq import CelebAHQ
 from datasets.lsun import LSUN
 from torch.utils.data import Subset
 import numpy as np
@@ -294,6 +295,50 @@ def get_dataset(args, config):
         )
         test_dataset = Subset(dataset, test_indices)
         dataset = Subset(dataset, train_indices)
+    
+    elif config.data.dataset == "CELEBA_HQ":
+        # Prefer an explicit path in config; else default under exp dir
+        dataset_path = getattr(config.data, 'dataset_path', None)
+        if dataset_path is None:
+            dataset_path = os.path.join(args.exp, "datasets", "celebahq256_imgs")
+        if config.data.random_flip:
+            train_transform = transforms.Compose(
+                [
+                    transforms.Resize(config.data.image_size),
+                    transforms.CenterCrop(config.data.image_size),
+                    transforms.RandomHorizontalFlip(p=0.5),
+                    transforms.ToTensor(),
+                ]
+            )
+            test_transform = transforms.Compose(
+                [
+                    transforms.Resize(config.data.image_size),
+                    transforms.CenterCrop(config.data.image_size),
+                    transforms.ToTensor(),
+                ]
+            )
+        else:
+            train_transform = test_transform = transforms.Compose(
+                [
+                    transforms.Resize(config.data.image_size),
+                    transforms.CenterCrop(config.data.image_size),
+                    transforms.ToTensor(),
+                ]
+            )
+
+        dataset = CelebAHQ(
+            root=dataset_path,
+            split="train",
+            transform=train_transform,
+        )
+
+        # Try to use a dedicated test split, fall back handled by dataset class
+        test_split = getattr(config.data, 'test_split', 'test')
+        test_dataset = CelebAHQ(
+            root=dataset_path,
+            split=test_split,
+            transform=test_transform,
+        )
     
     else:
         dataset, test_dataset = None, None
