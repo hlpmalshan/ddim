@@ -6,7 +6,7 @@ shopt -s nullglob
 
 # -------- Configurable knobs --------
 # Regularization values to sweep
-reg_values=(0.9)
+reg_values=(0.0 0.3)
 
 # Base config to use for training (relative to configs/)
 BASE_CONFIG="celebahq.yml"

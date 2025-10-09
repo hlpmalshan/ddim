@@ -333,7 +333,7 @@ def get_dataset(args, config):
         )
 
         # Try to use a dedicated test split, fall back handled by dataset class
-        test_split = getattr(config.data, 'test_split', 'test')
+        test_split = getattr(config.data, 'valid_split', 'valid')
         test_dataset = CelebAHQ(
             root=dataset_path,
             split=test_split,

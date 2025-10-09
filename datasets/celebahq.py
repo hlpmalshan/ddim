@@ -30,7 +30,7 @@ class CelebAHQ(Dataset):
     def __init__(self, root: str, split: str = "train", transform=None):
         super().__init__()
         split_root = os.path.join(root, split)
-        if os.path.isdir(split_root):
+        if split_root:
             self.root = split_root
         else:
             # Fallback to flat folder of images
