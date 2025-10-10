@@ -2,6 +2,7 @@ import os
 import logging
 import time
 import glob
+import math
 
 import numpy as np
 import tqdm
@@ -289,11 +290,8 @@ class Diffusion(object):
                 data_start = time.time()
 
     def sample(self):
-        if getattr(self.config, "distributed", False):
-            if dist.is_available() and dist.is_initialized() and dist.get_rank() != 0:
-                return
-
-        model = Model(self.config)
+        is_distributed = bool(getattr(self.config, "distributed", False))
+        model = Model(self.config).to(self.device)
 
         if not self.args.use_pretrained:
             if getattr(self.config.sampling, "ckpt_id", None) is None:
@@ -308,7 +306,6 @@ class Diffusion(object):
                     ),
                     map_location=self.config.device,
                 )
-            model = model.to(self.device)
             model.load_state_dict(states[0], strict=True)
 
             if self.config.model.ema:
@@ -342,18 +339,64 @@ class Diffusion(object):
         else:
             raise NotImplementedError("Sample procedeure not defined")
 
+        if is_distributed and dist.is_available() and dist.is_initialized():
+            dist.barrier()
+
     def sample_fid(self, model):
         config = self.config
-        img_id = len(glob.glob(f"{self.args.image_folder}/*"))
-        print(f"starting from image {img_id}")
+        rank = getattr(config, "rank", 0)
+        world_size = getattr(config, "world_size", 1)
+        base_folder = self.args.image_folder
+
+        # Ensure the output directory exists before other ranks proceed.
+        if rank == 0:
+            os.makedirs(base_folder, exist_ok=True)
+        if world_size > 1 and dist.is_available() and dist.is_initialized():
+            dist.barrier()
+
         total_n_samples = config.sampling.n_samples
-        n_rounds = (total_n_samples - img_id) // config.sampling.batch_size
+        batch_size = config.sampling.batch_size
+
+        if world_size > 1 and dist.is_available() and dist.is_initialized():
+            base_existing = len(glob.glob(os.path.join(base_folder, "*.png")))
+            existing_tensor = torch.tensor([base_existing], device=self.device, dtype=torch.long)
+            dist.broadcast(existing_tensor, src=0)
+            global_existing = int(existing_tensor.item())
+
+            total_remaining = max(total_n_samples - global_existing, 0)
+            if total_remaining == 0:
+                if rank == 0:
+                    logging.info(
+                        "Requested %d samples already present in %s; skipping generation.",
+                        total_n_samples,
+                        base_folder,
+                    )
+                return
+
+            per_rank = total_remaining // world_size
+            remainder = total_remaining % world_size
+            my_target = per_rank + (1 if rank < remainder else 0)
+            start_offset = per_rank * rank + min(rank, remainder)
+            img_id = global_existing + start_offset
+        else:
+            global_existing = len(glob.glob(os.path.join(base_folder, "*.png")))
+            my_target = max(total_n_samples - global_existing, 0)
+            img_id = global_existing
+
+        if my_target == 0:
+            logging.info("No samples left to generate for rank %d", rank)
+            return
+
+        print(f"starting from image {img_id} (rank {rank})")
+
+        remaining = my_target
+        n_rounds = math.ceil(remaining / batch_size)
 
         with torch.no_grad():
             for _ in tqdm.tqdm(
                 range(n_rounds), desc="Generating image samples for FID evaluation."
             ):
-                n = config.sampling.batch_size
+                n = min(batch_size, remaining)
                 x = torch.randn(
                     n,
                     config.data.channels,
@@ -370,6 +413,10 @@ class Diffusion(object):
                         x[i], os.path.join(self.args.image_folder, f"{img_id}.png")
                     )
                     img_id += 1
+                remaining -= n
+
+        if world_size > 1 and dist.is_available() and dist.is_initialized():
+            dist.barrier()
 
     def sample_sequence(self, model):
         config = self.config

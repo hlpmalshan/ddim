@@ -130,6 +130,7 @@ for reg in "${reg_values[@]}"; do
     IDIR="celeba_iso_${reg}_s${step}"
     GEN_DIR="$REG_GEN_DIR/$IDIR"
     mkdir -p "$GEN_DIR"
+    find "$GEN_DIR" -maxdepth 1 -type f -name '*.png' -delete
 
     TMP_CFG_NAME="_tmp_celeba_ckpt_${step}.yml"
     make_cfg_with_ckpt "$step" "$BASE_CONFIG" "$TMP_CFG_NAME"
