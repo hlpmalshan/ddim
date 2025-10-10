@@ -63,7 +63,7 @@ for reg in "${reg_values[@]}"; do
   DOC="ddim_iso_${reg}"
   REG_LOG_DIR="$LOGS_DIR/$DOC"
 
-  echo "[Train] CIFAR100, reg=$reg"
+  echo "[Train] CIFAR10, reg=$reg"
   # If no checkpoints yet, run training; otherwise skip
   if ! compgen -G "$REG_LOG_DIR/ckpt_*.pth" > /dev/null; then
     run_main \

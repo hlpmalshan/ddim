@@ -26,12 +26,12 @@ model:
 
 diffusion:
     beta_schedule: linear
-    beta_start: 0.000025
-    beta_end: 0.005
-    num_diffusion_timesteps: 4000
+    beta_start: 0.0001
+    beta_end: 0.02
+    num_diffusion_timesteps: 1000
 
 training:
-    batch_size: 128
+    batch_size: 64
     n_epochs: 1300
     n_iters: 508300
     snapshot_freq: 25415

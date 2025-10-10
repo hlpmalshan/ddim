@@ -9,7 +9,7 @@ shopt -s nullglob
 reg_values=(0.0 0.3)
 
 # Base config to use for training (relative to configs/)
-BASE_CONFIG="oxfordIIITPet.yml"
+BASE_CONFIG="oxfordIIITpet.yml"
 
 # Experiment root (where logs/ and datasets/ live)
 EXP_ROOT="ddim_ox_pet"
