@@ -40,6 +40,7 @@ training:
 sampling:
     batch_size: 64
     last_only: True
+    n_samples: 50000
 
 optim:
     weight_decay: 0.000
