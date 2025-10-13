@@ -8,17 +8,17 @@ reg_values=(0.0 0.3)
 
 # EXACT checkpoint steps to process per run.
 # e.g., CKPT_STEPS=(120000 200000); leave empty () to auto-discover all.
-CKPT_STEPS=( 200000 )
+CKPT_STEPS=( 408000 387600 367200 346800 326400 306000 285600 265200 244800 224400 204000 183600 163200 142800 122400 102000 81600 61200 40800 20400 )
 
 # Base config (relative to configs/)
-BASE_CONFIG="celeba.yml"
+BASE_CONFIG="oxfordFlowers102.yml"
 
 # Experiment roots
-EXP_ROOT="ddim_celeba"          # where logs/ and image_samples/ live
-DATA_ROOT="ddim_celeba"         # where datasets live
+EXP_ROOT="ddim_ox_flow"          # where logs/ and image_samples/ live
+DATA_ROOT="ddim_ox_flow"         # where datasets live
 
 # Real images dir for FID/PRDC (adjust to your dataset layout)
-REAL_DIR="$DATA_ROOT/datasets/celeba/celeba/img_align_celeba"
+REAL_DIR="$DATA_ROOT/ddim_ox_flow/datasets/oxford_flowers/flowers-102/jpg"
 
 # Output / logs
 LOGS_DIR="$EXP_ROOT/logs"
@@ -127,12 +127,12 @@ for reg in "${reg_values[@]}"; do
     step=$(basename "$ckpt_path" | sed -E 's/^ckpt_([0-9]+)\.pth$/\1/')
     echo "--- Sampling & Evaluating: reg=$reg, step=$step ---"
 
-    IDIR="celeba_iso_${reg}_s${step}"
+    IDIR="ox_flow_iso_${reg}_s${step}"
     GEN_DIR="$REG_GEN_DIR/$IDIR"
     mkdir -p "$GEN_DIR"
     find "$GEN_DIR" -maxdepth 1 -type f -name '*.png' -delete
 
-    TMP_CFG_NAME="_tmp_celeba_ckpt_${step}.yml"
+    TMP_CFG_NAME="_tmp_ox_flow_ckpt_${step}.yml"
     make_cfg_with_ckpt "$step" "$BASE_CONFIG" "$TMP_CFG_NAME"
 
     # Sampling to EXP_ROOT/image_samples/<IDIR>
@@ -142,7 +142,6 @@ for reg in "${reg_values[@]}"; do
       --doc "$DOC" \
       --reg "$reg" \
       --sample --fid \
-      --sample_type 
       --timesteps "$TIMESTEPS" --eta "$ETA" --ni \
       -i "$IDIR"
 
@@ -160,4 +159,4 @@ for reg in "${reg_values[@]}"; do
   echo "Saved CSV: $CSV_OUT"
 done
 
-echo "CelebA sampling & evaluation done."
+echo "OxfordFlowers sampling & evaluation done."

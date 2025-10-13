@@ -71,7 +71,7 @@ def parse_args_and_config():
     parser.add_argument(
         "--sample_type",
         type=str,
-        default="generalized",
+        default="ddpm_noisy",
         help="sampling approach (generalized or ddpm_noisy)",
     )
     parser.add_argument(
@@ -111,6 +111,13 @@ def parse_args_and_config():
     )
     parser.add_argument("--sequence", action="store_true")
 
+    parser.add_argument(
+        "--weighting_type",
+        type=str,
+        default='constant',
+        help="Loss weighting type ('constant' or 'snr')"
+    )
+    
     args = parser.parse_args()
     args.log_path = os.path.join(args.exp, "logs", args.doc)
 

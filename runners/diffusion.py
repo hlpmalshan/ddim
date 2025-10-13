@@ -213,7 +213,10 @@ class Diffusion(object):
                     low=0, high=self.num_timesteps, size=(n // 2 + 1,)
                 ).to(self.device)
                 t = torch.cat([t, self.num_timesteps - t - 1], dim=0)[:n]
-                loss, batch_norm_mean, batch_norm_standard_deviation = loss_registry[config.model.type](model, x, t, e, b, reg = args.reg)
+                loss, batch_norm_mean, batch_norm_standard_deviation = loss_registry[config.model.type](model, x, t, e, b, 
+                                                                                                        reg=args.reg, 
+                                                                                                        weighting_type=args.weighting_type, 
+                                                                                                        snr_gamma=config.snr_gamma)
 
                 reduced_loss = loss.detach()
                 if is_distributed:

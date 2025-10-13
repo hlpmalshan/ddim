@@ -76,7 +76,7 @@ def extract_rgb_features(dataloader):
     return np.concatenate(imgs_list, axis=0)
 
 # -------- Main --------
-def main(real_dir, gen_dir, batch_size=32, device='cuda:1' if torch.cuda.is_available() else 'cpu'):
+def main(real_dir, gen_dir, batch_size=32, device='cuda:1' if torch.cuda.is_available() else 'cpu', image_size=64):
     print("[Cleaning image directories]")
     clean_image_dir(real_dir)
     clean_image_dir(gen_dir)
@@ -94,8 +94,8 @@ def main(real_dir, gen_dir, batch_size=32, device='cuda:1' if torch.cuda.is_avai
         real_files = real_files[:len(gen_files)]
     
     print("[Preparing resized copies for FID/IS]")
-    real_tmp = prepare_resized_copy(real_dir)
-    gen_tmp = prepare_resized_copy(gen_dir)
+    real_tmp = prepare_resized_copy(real_dir, size=image_size)
+    gen_tmp = prepare_resized_copy(gen_dir, size=image_size)
     
     print("[Calculating FID and IS with torch-fidelity]")
     metrics = torch_fidelity.calculate_metrics(
@@ -115,8 +115,8 @@ def main(real_dir, gen_dir, batch_size=32, device='cuda:1' if torch.cuda.is_avai
 
     print("[Calculating PRDC metrics with raw RGB images]")
     prdc_transform = transforms.Compose([
-        transforms.Resize(64),
-        transforms.CenterCrop(64),
+        transforms.Resize(image_size),
+        transforms.CenterCrop(image_size),
         transforms.PILToTensor(),  # float tensor in [0,1]
     ])
     ds_real = ImageDataset(real_dir, prdc_transform)
@@ -143,5 +143,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Calculate FID, IS, PRDC metrics on image directories")
     parser.add_argument("--real_dir", type=str, help="Directory with real images")
     parser.add_argument("--gen_dir", type=str, help="Directory with generated images")
+    parser.add_argument("--image_size", type=int, default=64, help="Image resolution (eg. 32 or 64)")
     args = parser.parse_args()
-    main(args.real_dir, args.gen_dir)
+    main(args.real_dir, args.gen_dir, args.image_size)
