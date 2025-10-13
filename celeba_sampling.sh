@@ -112,7 +112,7 @@ for reg in "${reg_values[@]}"; do
   DOC="ddim_iso_${reg}"
   REG_LOG_DIR="$LOGS_DIR/$DOC"
   REG_GEN_DIR="$GEN_BASE"
-  mkdir -p "$REG_GEN_DIR"
+  # mkdir -p "$REG_GEN_DIR"
 
   mapfile -t ckpts < <(discover_ckpts "$REG_LOG_DIR")
   if [ ${#ckpts[@]} -eq 0 ]; then
@@ -129,8 +129,8 @@ for reg in "${reg_values[@]}"; do
 
     IDIR="celeba_iso_${reg}_s${step}"
     GEN_DIR="$REG_GEN_DIR/$IDIR"
-    mkdir -p "$GEN_DIR"
-    find "$GEN_DIR" -maxdepth 1 -type f -name '*.png' -delete
+    # mkdir -p "$GEN_DIR"
+    # find "$GEN_DIR" -maxdepth 1 -type f -name '*.png' -delete
 
     TMP_CFG_NAME="_tmp_celeba_ckpt_${step}.yml"
     make_cfg_with_ckpt "$step" "$BASE_CONFIG" "$TMP_CFG_NAME"

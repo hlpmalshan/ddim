@@ -8,7 +8,8 @@ reg_values=(0.0 0.3)
 
 # EXACT checkpoint steps to process per run.
 # e.g., CKPT_STEPS=(120000 200000); leave empty () to auto-discover all.
-CKPT_STEPS=( 408000 387600 367200 346800 326400 306000 285600 265200 244800 224400 204000 183600 163200 142800 122400 102000 81600 61200 40800 20400 )
+# CKPT_STEPS=( 408000 387600 367200 346800 326400 306000 285600 265200 244800 224400 204000 183600 163200 142800 122400 102000 81600 61200 40800 20400 )
+CKPT_STEPS=( 408000 326400 224400 122400 20400 )
 
 # Base config (relative to configs/)
 BASE_CONFIG="oxfordFlowers102.yml"
@@ -112,7 +113,6 @@ for reg in "${reg_values[@]}"; do
   DOC="ddim_iso_${reg}"
   REG_LOG_DIR="$LOGS_DIR/$DOC"
   REG_GEN_DIR="$GEN_BASE"
-  mkdir -p "$REG_GEN_DIR"
 
   mapfile -t ckpts < <(discover_ckpts "$REG_LOG_DIR")
   if [ ${#ckpts[@]} -eq 0 ]; then
@@ -129,8 +129,8 @@ for reg in "${reg_values[@]}"; do
 
     IDIR="ox_flow_iso_${reg}_s${step}"
     GEN_DIR="$REG_GEN_DIR/$IDIR"
-    mkdir -p "$GEN_DIR"
-    find "$GEN_DIR" -maxdepth 1 -type f -name '*.png' -delete
+    # mkdir -p "$GEN_DIR"
+    # find "$GEN_DIR" -maxdepth 1 -type f -name '*.png' -delete
 
     TMP_CFG_NAME="_tmp_ox_flow_ckpt_${step}.yml"
     make_cfg_with_ckpt "$step" "$BASE_CONFIG" "$TMP_CFG_NAME"

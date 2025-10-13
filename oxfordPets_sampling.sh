@@ -8,7 +8,8 @@ reg_values=(0.0 0.3)
 
 # EXACT checkpoint steps to process per run.
 # e.g., CKPT_STEPS=(120000 200000); leave empty () to auto-discover all.
-CKPT_STEPS=( 200560 175490 150420 125350 100280 75210 50140 25070 225630 250700 275770 300840 325910 350980 376050 401120 426190 451260 476330 501400 )
+# CKPT_STEPS=( 200560 175490 150420 125350 100280 75210 50140 25070 225630 250700 275770 300840 325910 350980 376050 401120 426190 451260 476330 501400 )
+CKPT_STEPS=( 200560 300840 401120 501400 100280 )
 
 # Base config (relative to configs/)
 BASE_CONFIG="oxfordIIITpet.yml"
@@ -112,7 +113,7 @@ for reg in "${reg_values[@]}"; do
   DOC="ddim_iso_${reg}"
   REG_LOG_DIR="$LOGS_DIR/$DOC"
   REG_GEN_DIR="$GEN_BASE"
-  mkdir -p "$REG_GEN_DIR"
+  # mkdir -p "$REG_GEN_DIR"
 
   mapfile -t ckpts < <(discover_ckpts "$REG_LOG_DIR")
   if [ ${#ckpts[@]} -eq 0 ]; then
@@ -129,8 +130,8 @@ for reg in "${reg_values[@]}"; do
 
     IDIR="ox_pet_iso_${reg}_s${step}"
     GEN_DIR="$REG_GEN_DIR/$IDIR"
-    mkdir -p "$GEN_DIR"
-    find "$GEN_DIR" -maxdepth 1 -type f -name '*.png' -delete
+    # mkdir -p "$GEN_DIR"
+    # find "$GEN_DIR" -maxdepth 1 -type f -name '*.png' -delete
 
     TMP_CFG_NAME="_tmp_ox_pet_ckpt_${step}.yml"
     make_cfg_with_ckpt "$step" "$BASE_CONFIG" "$TMP_CFG_NAME"

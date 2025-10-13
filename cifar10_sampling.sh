@@ -8,7 +8,8 @@ reg_values=(0.0 0.3)
 
 # EXACT checkpoint steps to process per run.
 # e.g., CKPT_STEPS=(120000 200000); leave empty () to auto-discover all.
-CKPT_STEPS=( 508300 482885 457470 432055 406640 381225 355810 330395 304980 279565 254150 228735 203320 177905 152490 127075 101660 76245 50830 25415 )
+# CKPT_STEPS=( 508300 482885 457470 432055 406640 381225 355810 330395 304980 279565 254150 228735 203320 177905 152490 127075 101660 76245 50830 25415 )
+CKPT_STEPS=( 508300 406640 279565 152490 25415 )
 
 # Base config (relative to configs/)
 BASE_CONFIG="cifar10.yml"
@@ -114,7 +115,7 @@ for reg in "${reg_values[@]}"; do
   DOC="ddim_iso_${reg}"
   REG_LOG_DIR="$LOGS_DIR/$DOC"
   REG_GEN_DIR="$GEN_BASE"
-  mkdir -p "$REG_GEN_DIR"
+#  mkdir -p "$REG_GEN_DIR"
 
   mapfile -t ckpts < <(discover_ckpts "$REG_LOG_DIR")
   if [ ${#ckpts[@]} -eq 0 ]; then
@@ -131,8 +132,8 @@ for reg in "${reg_values[@]}"; do
 
     IDIR="cifar10_iso_${reg}_s${step}"
     GEN_DIR="$REG_GEN_DIR/$IDIR"
-    mkdir -p "$GEN_DIR"
-    find "$GEN_DIR" -maxdepth 1 -type f -name '*.png' -delete
+    # mkdir -p "$GEN_DIR"
+    # find "$GEN_DIR" -maxdepth 1 -type f -name '*.png' -delete
 
     TMP_CFG_NAME="_tmp_cifar10_ckpt_${step}.yml"
     make_cfg_with_ckpt "$step" "$BASE_CONFIG" "$TMP_CFG_NAME"
