@@ -39,8 +39,9 @@ training:
     validation_freq: 2000
 
 sampling:
-    batch_size: 32
+    batch_size: 128
     last_only: True
+    n_samples: 27000
 
 optim:
     weight_decay: 0.000

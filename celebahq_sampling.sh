@@ -1,36 +1,44 @@
 #!/bin/bash
-# celeba_ckpt_first.sh — process by checkpoint step, then by reg (no dir creation)
 set -euo pipefail
 shopt -s nullglob
 
-# -------- Config --------
+# ---------- Config ----------
 reg_values=(0.0 0.3)
-CKPT_STEPS=(200000 160000 120000 80000 40000)                 # leave empty () to auto-discover union across regs
-BASE_CONFIG="celeba.yml"
+CKPT_STEPS=(500000 400000 300000 200000 100000)  # leave empty () to auto-discover
 
-EXP_ROOT="ddim_celeba"
-DATA_ROOT="ddim_celeba"
-REAL_DIR="$DATA_ROOT/datasets/celeba/celeba/img_align_celeba"
-REAL_PROCCED_DIR="$DATA_ROOT/datasets/celeba/celeba/prepocessed_imgs"
+BASE_CONFIG="celebahq.yml"   # under configs/
+
+# Match your path pattern:
+EXP_ROOT="ddim_celebahq"
+DATA_ROOT="$EXP_ROOT"
+REAL_DIR="$DATA_ROOT/datasets/celebahq/celebahq256/celebahq256_imgs"
 
 LOGS_DIR="$EXP_ROOT/logs"
 GEN_BASE="$EXP_ROOT/image_samples"
-EVAL_SCRIPT="celeba_evaluation.py"   # your eval script
+EVAL_SCRIPT="celebahq_eval.py"   # prints FID + PRDC
 
 # Sampling params
 TIMESTEPS=${TIMESTEPS:-1000}
 ETA=${ETA:-1}
 
-# Single-GPU / DDP
+# DDP / single-GPU
 GPU_ID=${GPU_ID:-0}
 DISTRIBUTED=${DISTRIBUTED:-false}
 GPUS=${GPUS:-}
 NPROC_PER_NODE=${NPROC_PER_NODE:-0}
 MASTER_PORT=${MASTER_PORT:-29501}
 DIST_BACKEND=${DIST_BACKEND:-nccl}
-TORCH_NCCL_TIMEOUT=${TORCH_NCCL_TIMEOUT:-3600}
 
-# -------- Helpers --------
+# Eval params
+EVAL_RES=${EVAL_RES:-256}
+MAX_IMAGES=${MAX_IMAGES:-27000}
+BATCH_SIZE=${BATCH_SIZE:-8}
+WORKERS=${WORKERS:-8}
+NEAREST_K=${NEAREST_K:-5}
+EVAL_CPU=${EVAL_CPU:-false}
+EVAL_SEED=${EVAL_SEED:-123}
+
+# ---------- Helpers ----------
 run_main() {
   if [ "$DISTRIBUTED" = true ]; then
     if [ -n "$GPUS" ]; then
@@ -40,12 +48,14 @@ run_main() {
         NPROC_PER_NODE=${#_gpu_array[@]}
       fi
     fi
-    [ "${NPROC_PER_NODE}" -le 0 ] && NPROC_PER_NODE=1
+    if [ "${NPROC_PER_NODE}" -le 0 ]; then
+      echo "[WARN] NPROC_PER_NODE not set; defaulting to 1"
+      NPROC_PER_NODE=1
+    fi
     export OMP_NUM_THREADS=${OMP_NUM_THREADS:-1}
     export NCCL_DEBUG=${NCCL_DEBUG:-WARN}
     export NCCL_IB_DISABLE=${NCCL_IB_DISABLE:-1}
     export DIST_BACKEND
-    export TORCH_NCCL_TIMEOUT
     torchrun --standalone \
       --master_port="$MASTER_PORT" \
       --nproc_per_node="$NPROC_PER_NODE" \
@@ -70,7 +80,7 @@ make_cfg_with_ckpt() {
 
 discover_steps_for_reg() {
   local reg="$1"
-  local dir="$LOGS_DIR/ddim_iso_${reg}"
+  local dir="$LOGS_DIR/celebahq_iso_${reg}"
   ls -1 "$dir"/ckpt_*.pth 2>/dev/null \
     | sed -E 's@.*/ckpt_([0-9]+)\.pth@\1@' \
     | sort -V || true
@@ -78,7 +88,7 @@ discover_steps_for_reg() {
 
 ckpt_path_for() {
   local reg="$1" step="$2"
-  echo "$LOGS_DIR/ddim_iso_${reg}/ckpt_${step}.pth"
+  echo "$LOGS_DIR/celebahq_iso_${reg}/ckpt_${step}.pth"
 }
 
 parse_eval_to_csv_row() {
@@ -93,7 +103,7 @@ parse_eval_to_csv_row() {
     "${reg}" "${step}" "${fid:-NA}" "${precision:-NA}" "${recall:-NA}" "${density:-NA}" "${coverage:-NA}"
 }
 
-# -------- Build checkpoint-first order --------
+# ---------- Build checkpoint-first order ----------
 declare -a STEPS
 if [ ${#CKPT_STEPS[@]} -gt 0 ]; then
   STEPS=("${CKPT_STEPS[@]}")
@@ -104,50 +114,58 @@ else
   done
   mapfile -t STEPS < <(printf "%s\n" "${tmp_steps[@]}" | sort -V | awk '!seen[$0]++')
 fi
+
 [ ${#STEPS[@]} -gt 0 ] || { echo "[INFO] No checkpoints to process."; exit 0; }
 
-# -------- Main (by step, then by reg) --------
+# ---------- Main (by step, then by reg) ----------
 for step in "${STEPS[@]}"; do
   echo "=== STEP $step ==="
   for reg in "${reg_values[@]}"; do
-    DOC="ddim_iso_${reg}"
-    REG_LOG_DIR="$LOGS_DIR/$DOC"
+    REG_LOG_DIR="$LOGS_DIR/celebahq_iso_${reg}"
     REG_GEN_DIR="$GEN_BASE"
-
     CKPT_PATH="$(ckpt_path_for "$reg" "$step")"
+
     if [ ! -f "$CKPT_PATH" ]; then
       echo "[SKIP] reg=$reg step=$step (missing $CKPT_PATH)"
       continue
     fi
 
     echo "--- Sampling & Evaluating: reg=$reg, step=$step ---"
-    IDIR="celeba_iso_${reg}_s${step}"
+    IDIR="celebahq_iso_${reg}_s${step}"
     GEN_DIR="$REG_GEN_DIR/$IDIR"
 
-    TMP_CFG_NAME="_tmp_celeba_ckpt_${step}.yml"
+    TMP_CFG_NAME="_tmp_celebahq_ckpt_${step}.yml"
     make_cfg_with_ckpt "$step" "$BASE_CONFIG" "$TMP_CFG_NAME"
 
     # Sampling (assumes Python creates needed dirs)
     run_main \
       --config "$TMP_CFG_NAME" \
       --exp "$EXP_ROOT" \
-      --doc "$DOC" \
+      --doc "celebahq_iso_${reg}" \
       --reg "$reg" \
       --sample --fid \
       --timesteps "$TIMESTEPS" --eta "$ETA" --ni \
       -i "$IDIR"
 
-    # Evaluation (assumes eval/log dirs exist already)
-    EVAL_TXT="$REG_LOG_DIR/eval_ckpt_${step}.txt"
+    # Evaluation (assumes eval/log dirs already exist)
+    EVAL_TXT="$REG_LOG_DIR/logs/eval_ckpt_${step}.txt"
     python "$EVAL_SCRIPT" \
-      --real_dir "$REAL_PROCCED_DIR" \
-      --gen_dir  "$GEN_DIR" | tee "$EVAL_TXT"
+      --real_dir "$REAL_DIR" \
+      --gen_dir  "$GEN_DIR" \
+      --resolution "$EVAL_RES" \
+      --max_images "$MAX_IMAGES" \
+      --batch_size "$BATCH_SIZE" \
+      --workers "$WORKERS" \
+      --nearest_k "$NEAREST_K" \
+      ${EVAL_CPU:+--cpu} \
+      --seed "$EVAL_SEED" | tee "$EVAL_TXT"
 
     CSV_OUT="$REG_LOG_DIR/eval_summary.csv"
-    # Append if exists; otherwise create header + first row (no dir creation).
+    # Do NOT create file/dir; append only if file exists.
     if [ -f "$CSV_OUT" ]; then
       parse_eval_to_csv_row "$EVAL_TXT" "$reg" "$step" >> "$CSV_OUT"
     else
+      # If you want to strictly avoid creating files, comment the next two lines.
       echo "reg,step,fid,precision,recall,density,coverage" > "$CSV_OUT"
       parse_eval_to_csv_row "$EVAL_TXT" "$reg" "$step" >> "$CSV_OUT"
     fi
@@ -156,4 +174,4 @@ for step in "${STEPS[@]}"; do
   done
 done
 
-echo "Celeba sampling & evaluation done (checkpoint-first, no mkdir)."
+echo "CelebA-HQ sampling & evaluation done."

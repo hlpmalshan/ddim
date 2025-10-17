@@ -9,6 +9,7 @@ import torch
 import numpy as np
 import torch.utils.tensorboard as tb
 import torch.distributed as dist
+from datetime import timedelta
 
 from runners.diffusion import Diffusion
 
@@ -148,7 +149,7 @@ def parse_args_and_config():
         else:
             local_rank = int(os.environ.get("LOCAL_RANK", 0))
         torch.cuda.set_device(local_rank)
-        dist.init_process_group(backend=args.dist_backend, init_method="env://")
+        dist.init_process_group(backend=args.dist_backend, timeout=timedelta(minutes=240),init_method="env://")
         rank = dist.get_rank()
         world_size = dist.get_world_size()
     else:
