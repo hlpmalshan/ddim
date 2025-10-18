@@ -114,7 +114,7 @@ for reg in "${reg_values[@]}"; do
   # If no checkpoints yet, run training; otherwise skip
   if [ "$RESUME"=true ] ||  ! compgen -G "$REG_LOG_DIR/ckpt_*.pth" > /dev/null; then
     run_main \
-      --config "$BASE_CONFIG" \
+      --config "$TEMP_CONFIG" \
       --exp "$EXP_ROOT" \
       --doc "$DOC" \
       --reg "$reg" \
