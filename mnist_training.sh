@@ -108,7 +108,7 @@ for reg in "${reg_values[@]}"; do
 
   # Create temporary YAML config
   TEMP_CONFIG="temp_mnist_${reg}_${digits_str:-all}.yml"
-  create_temp_yaml "$BASE_CONFIG" "$TEMP_CONFIG" "$SELECTED_DIGITS"
+  create_temp_yaml "configs/$BASE_CONFIG" "configs/$TEMP_CONFIG" "$SELECTED_DIGITS"
 
   echo "[Train] MNIST, reg=$reg, digits=${SELECTED_DIGITS:-all}"
   # If no checkpoints yet, run training; otherwise skip
