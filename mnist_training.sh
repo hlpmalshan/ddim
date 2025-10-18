@@ -101,18 +101,7 @@ create_temp_yaml() {
     if command -v yq >/dev/null 2>&1; then
       yq eval ".data.selected_digits = $digits_yaml" -i "$output_yaml"
     else
-      # Use sed to replace or append selected_digits under data
-      if grep -q "^data:" "$output_yaml"; then
-        # If data section exists, replace or append selected_digits
-        if grep -q "^  selected_digits:" "$output_yaml"; then
-          sed -i "/^  selected_digits:/c\  selected_digits: $digits_yaml" "$output_yaml"
-        else
-          sed -i "/^data:/a\  selected_digits: $digits_yaml" "$output_yaml"
-        fi
-      else
-        # If no data section, append it
-        echo -e "\ndata:\n  selected_digits: $digits_yaml" >> "$output_yaml"
-      fi
+      sed -i "s|^  selected_digits:.*|  selected_digits: $digits_yaml|" "$output_yaml"
     fi
   fi
   # Validate the generated YAML
