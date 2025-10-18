@@ -78,40 +78,26 @@ run_main() {
   fi
 }
 
-# Function to create temporary YAML config
-create_temp_yaml() {
-  local input_yaml="$1"
-  local output_yaml="$2"
-  local digits="$3"
-
-  # Check if input YAML exists
-  if [ ! -f "$input_yaml" ]; then
-    echo "Error: Base config file '$input_yaml' not found."
-    exit 1
-  fi
-
-  # Copy base YAML to temporary file
-  cp "$input_yaml" "$output_yaml"
-
-  # If digits are provided, modify the YAML
-  if [ -n "$digits" ]; then
-    # Convert comma-separated digits to YAML list format
-    digits_yaml=$(echo "[$digits]")
-    # Use yq if available, otherwise use sed carefully
-    if command -v yq >/dev/null 2>&1; then
-      yq eval ".data.selected_digits = $digits_yaml" -i "$output_yaml"
-    else
-      sed -i "s|^  selected_digits:.*|  selected_digits: $digits_yaml|" "$output_yaml"
-    fi
-  fi
-  # Validate the generated YAML
-  if command -v yq >/dev/null 2>&1; then
-    if ! yq eval . "$output_yaml" >/dev/null 2>&1; then
-      echo "Error: Generated YAML file '$output_yaml' is invalid."
-      cat "$output_yaml"
-      exit 1
-    fi
-  fi
+# Function to create temporary YAML config with updated selected_digits
+make_cfg_with_digits() {
+  local digits="$1" in_rel="$2" out_rel="$3"
+  awk -v digits="[$digits]" '
+    BEGIN { in_data=0 }
+    /^[[:space:]]*data:[[:space:]]*$/ { in_data=1; print; next }
+    /^[^[:space:]]/ { if (in_data) in_data=0 }
+    {
+      if (in_data && $1 ~ /^selected_digits:/) {
+        sub(/selected_digits:[[:space:]]*\[[^]]*\]/, "selected_digits: " digits)
+      }
+      print
+    }
+    END {
+      if (!in_data && digits != "[]") {
+        print "data:"
+        print "  selected_digits: " digits
+      }
+    }
+  ' "$in_rel" > "$out_rel"
 }
 
 for reg in "${reg_values[@]}"; do
@@ -121,7 +107,13 @@ for reg in "${reg_values[@]}"; do
 
   # Create temporary YAML config
   TEMP_CONFIG="temp_mnist_${reg}_${digits_str:-all}.yml"
-  create_temp_yaml "configs/$BASE_CONFIG" "configs/$TEMP_CONFIG" "$SELECTED_DIGITS"
+  make_cfg_with_digits "$SELECTED_DIGITS" "configs/$BASE_CONFIG" "configs/$TEMP_CONFIG"
+
+  # Check if the temporary YAML was created successfully
+  if [ ! -f "configs/$TEMP_CONFIG" ]; then
+    echo "Error: Failed to create temporary config 'configs/$TEMP_CONFIG'."
+    exit 1
+  fi
 
   echo "[Train] MNIST, reg=$reg, digits=${SELECTED_DIGITS:-all}"
   # If no checkpoints yet, run training; otherwise skip
