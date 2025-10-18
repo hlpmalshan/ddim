@@ -28,8 +28,6 @@ GPUS=${GPUS:-}
 NPROC_PER_NODE=${NPROC_PER_NODE:-0}
 MASTER_PORT=${MASTER_PORT:-29501}
 DIST_BACKEND=${DIST_BACKEND:-nccl}
-TORCH_NCCL_TIMEOUT=${TORCH_NCCL_TIMEOUT:-3600}
-
 # -------- Helpers --------
 run_main() {
   if [ "$DISTRIBUTED" = true ]; then
@@ -45,7 +43,6 @@ run_main() {
     export NCCL_DEBUG=${NCCL_DEBUG:-WARN}
     export NCCL_IB_DISABLE=${NCCL_IB_DISABLE:-1}
     export DIST_BACKEND
-    export TORCH_NCCL_TIMEOUT
     torchrun --standalone \
       --master_port="$MASTER_PORT" \
       --nproc_per_node="$NPROC_PER_NODE" \

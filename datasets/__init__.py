@@ -320,7 +320,7 @@ def get_dataset(args, config):
         else:
             train_transform = test_transform = transforms.Compose(
                 [
-                    transforms.Resize(config.data.image_size),
+                    transforms.Resize(config.data.image_size), 
                     transforms.CenterCrop(config.data.image_size),
                     transforms.ToTensor(),
                 ]
@@ -328,7 +328,7 @@ def get_dataset(args, config):
 
         dataset = CelebAHQ(
             root=dataset_path,
-            split="train",
+            split="train", 
             transform=train_transform,
         )
 

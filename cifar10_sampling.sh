@@ -19,7 +19,7 @@ EXP_ROOT="ddim_cifar10"          # where logs/ and image_samples/ live
 DATA_ROOT="ddim_cifar10"         # where datasets live
 
 # Real images dir for FID/PRDC (adjust to your dataset layout)
-REAL_DIR="$DATA_ROOT/ddim_cifar10/datasets/cifar10/train"
+REAL_DIR="$DATA_ROOT/datasets/cifar10/train"
 
 # Image size
 IMAGE_SIZE=32

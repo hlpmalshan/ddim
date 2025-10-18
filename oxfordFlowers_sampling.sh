@@ -19,7 +19,7 @@ EXP_ROOT="ddim_ox_flow"          # where logs/ and image_samples/ live
 DATA_ROOT="ddim_ox_flow"         # where datasets live
 
 # Real images dir for FID/PRDC (adjust to your dataset layout)
-REAL_DIR="$DATA_ROOT/ddim_ox_flow/datasets/oxford_flowers/flowers-102/jpg"
+REAL_DIR="$DATA_ROOT/datasets/oxford_flowers/flowers-102/jpg"
 
 # Output / logs
 LOGS_DIR="$EXP_ROOT/logs"

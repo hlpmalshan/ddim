@@ -19,7 +19,7 @@ EXP_ROOT="ddim_cifar100"          # where logs/ and image_samples/ live
 DATA_ROOT="ddim_cifar100"         # where datasets live
 
 # Real images dir for FID/PRDC (adjust to your dataset layout)
-REAL_DIR="$DATA_ROOT/ddim_cifar100/datasets/cifar100/train"
+REAL_DIR="$DATA_ROOT/datasets/cifar100/train"
 
 # Output / logs
 LOGS_DIR="$EXP_ROOT/logs"
