@@ -105,6 +105,9 @@ for reg in "${reg_values[@]}"; do
   DOC="ddim_iso_${reg}"
   REG_LOG_DIR="$LOGS_DIR/$DOC"
 
+  # Create log directories if they don't exist
+  mkdir -p "$LOGS_DIR" "$REG_LOG_DIR"
+
   # Create temporary YAML config
   TEMP_CONFIG="temp_mnist_${reg}_${digits_str:-all}.yml"
   make_cfg_with_digits "$SELECTED_DIGITS" "configs/$BASE_CONFIG" "configs/$TEMP_CONFIG"
