@@ -83,21 +83,45 @@ create_temp_yaml() {
   local input_yaml="$1"
   local output_yaml="$2"
   local digits="$3"
-  # Read the base YAML and add selected_digits
+
+  # Check if input YAML exists
+  if [ ! -f "$input_yaml" ]; then
+    echo "Error: Base config file '$input_yaml' not found."
+    exit 1
+  fi
+
+  # Copy base YAML to temporary file
+  cp "$input_yaml" "$output_yaml"
+
+  # If digits are provided, modify the YAML
   if [ -n "$digits" ]; then
     # Convert comma-separated digits to YAML list format
     digits_yaml=$(echo "[$digits]")
-    # Use yq or sed to modify the YAML (assuming yq is installed; alternatively, use sed)
+    # Use yq if available, otherwise use sed carefully
     if command -v yq >/dev/null 2>&1; then
-      yq eval ".data.selected_digits = $digits_yaml" "$input_yaml" > "$output_yaml"
+      yq eval ".data.selected_digits = $digits_yaml" -i "$output_yaml"
     else
-      # Fallback to sed if yq is not available
-      cp "$input_yaml" "$output_yaml"
-      echo "data:" >> "$output_yaml"
-      echo "  selected_digits: $digits_yaml" >> "$output_yaml"
+      # Use sed to replace or append selected_digits under data
+      if grep -q "^data:" "$output_yaml"; then
+        # If data section exists, replace or append selected_digits
+        if grep -q "^  selected_digits:" "$output_yaml"; then
+          sed -i "/^  selected_digits:/c\  selected_digits: $digits_yaml" "$output_yaml"
+        else
+          sed -i "/^data:/a\  selected_digits: $digits_yaml" "$output_yaml"
+        fi
+      else
+        # If no data section, append it
+        echo -e "\ndata:\n  selected_digits: $digits_yaml" >> "$output_yaml"
+      fi
     fi
-  else
-    cp "$input_yaml" "$output_yaml"
+  fi
+  # Validate the generated YAML
+  if command -v yq >/dev/null 2>&1; then
+    if ! yq eval . "$output_yaml" >/dev/null 2>&1; then
+      echo "Error: Generated YAML file '$output_yaml' is invalid."
+      cat "$output_yaml"
+      exit 1
+    fi
   fi
 }
 
@@ -125,7 +149,7 @@ for reg in "${reg_values[@]}"; do
   fi
 
   # Clean up temporary YAML file
-  [ -f "$TEMP_CONFIG" ] && rm "$TEMP_CONFIG"
+  [ -f "configs/$TEMP_CONFIG" ] && rm "configs/$TEMP_CONFIG"
 done
 
 echo "MNIST training completed."
