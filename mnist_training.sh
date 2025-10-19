@@ -126,10 +126,10 @@ for reg in "${reg_values[@]}"; do
   TEMP_CONFIG="temp_mnist_${reg}_${digits_str:-all}.yml"
   make_cfg_with_digits "$SELECTED_DIGITS" "configs/$BASE_CONFIG" "configs/$TEMP_CONFIG"
 
-  echo "Base YAML content ($BASE_CONFIG):"
-  cat "$BASE_CONFIG"
+  echo "Base YAML content (configs/$BASE_CONFIG):"
+  cat "configs/$BASE_CONFIG"
 
-  echo "Temporary YAML content for reg=$reg ($TEMP_CONFIG):"
+  echo "Temporary YAML content for reg=$reg (configs/$TEMP_CONFIG):"
   cat "configs/$TEMP_CONFIG"
 
   # Check if the temporary YAML was created successfully
