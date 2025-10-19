@@ -79,26 +79,26 @@ run_main() {
 }
 
 # Function to create temporary YAML config with updated selected_digits
-# make_cfg_with_digits() {
-#   local digits="$1" in_rel="$2" out_rel="$3"
-#   awk -v digits="[$digits]" '
-#     BEGIN { in_data=0 }
-#     /^[[:space:]]*data:[[:space:]]*$/ { in_data=1; print; next }
-#     /^[^[:space:]]/ { if (in_data) in_data=0 }
-#     {
-#       if (in_data && $1 ~ /^selected_digits:/) {
-#         sub(/selected_digits:[[:space:]]*\[[^]]*\]/, "selected_digits: " digits)
-#       }
-#       print
-#     }
-#     END {
-#       if (!in_data && digits != "[]") {
-#         print "data:"
-#         print "  selected_digits: " digits
-#       }
-#     }
-#   ' "$in_rel" > "$out_rel"
-# }
+make_cfg_with_digits() {
+  local digits="$1" in_rel="$2" out_rel="$3"
+  awk -v digits="[$digits]" '
+    BEGIN { in_data=0 }
+    /^[[:space:]]*data:[[:space:]]*$/ { in_data=1; print; next }
+    /^[^[:space:]]/ { if (in_data) in_data=0 }
+    {
+      if (in_data && $1 ~ /^selected_digits:/) {
+        sub(/selected_digits:[[:space:]]*\[[^]]*\]/, "selected_digits: " digits)
+      }
+      print
+    }
+    END {
+      if (!in_data && digits != "[]") {
+        print "data:"
+        print "  selected_digits: " digits
+      }
+    }
+  ' "$in_rel" > "$out_rel"
+}
 
 # make_cfg_with_digits() {
 #   local digits="$1" in_rel="$2" out_rel="$3"
@@ -114,13 +114,13 @@ run_main() {
 #   fi
 # }
 
-make_cfg_with_digits() {
-  local digits="$1" in_rel="$2" out_rel="$3"
-  # Copy the input YAML to preserve all fields
-  cp "$in_rel" "$out_rel"
-  # Update selected_digits in-place, ensuring correct indentation
-  sed -i "/^[[:space:]]*data:/,/^[[:space:]]*[a-zA-Z]/ s/^[[:space:]]*selected_digits:.*/  selected_digits: [$digits]/" "$out_rel"
-}
+# make_cfg_with_digits() {
+#   local digits="$1" in_rel="$2" out_rel="$3"
+#   # Copy the input YAML to preserve all fields
+#   cp "$in_rel" "$out_rel"
+#   # Update selected_digits in-place, ensuring correct indentation
+#   sed -i "/^[[:space:]]*data:/,/^[[:space:]]*[a-zA-Z]/ s/^[[:space:]]*selected_digits:.*/  selected_digits: [$digits]/" "$out_rel"
+# }
 
 for reg in "${reg_values[@]}"; do
   echo "=== reg=$reg ==="
