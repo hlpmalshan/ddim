@@ -337,6 +337,8 @@ class Diffusion(object):
             self.sample_interpolation(model)
         elif self.args.sequence:
             self.sample_sequence(model)
+        elif self.args.intermediate_timesteps:
+            self.sample_intermediate(model)
         else:
             raise NotImplementedError("Sample procedeure not defined")
 
@@ -419,6 +421,86 @@ class Diffusion(object):
         if world_size > 1 and dist.is_available() and dist.is_initialized():
             dist.barrier()
 
+    def sample_intermediate(self, model):
+        config = self.config
+        rank = getattr(config, "rank", 0)
+        world_size = getattr(config, "world_size", 1)
+        base_folder = self.args.image_folder
+
+        # Ensure the base output directory exists
+        if rank == 0:
+            os.makedirs(base_folder, exist_ok=True)
+        if world_size > 1 and dist.is_available() and dist.is_initialized():
+            dist.barrier()
+
+        total_n_samples = config.sampling.n_samples  # e.g., 50000
+        batch_size = config.sampling.batch_size
+
+        if world_size > 1 and dist.is_available() and dist.is_initialized():
+            per_rank = total_n_samples // world_size
+            remainder = total_n_samples % world_size
+            my_target = per_rank + (1 if rank < remainder else 0)
+            start_offset = per_rank * rank + min(rank, remainder)
+            img_id = start_offset
+        else:
+            my_target = total_n_samples
+            img_id = 0
+
+        if my_target == 0:
+            logging.info("No samples to generate for rank %d", rank)
+            return
+
+        print(f"Starting from image {img_id} for {my_target} samples (rank {rank})")
+
+        # Create folders for each requested timestep
+        desired_timesteps = self.args.intermediate_timesteps
+        if rank == 0:
+            for t in desired_timesteps:
+                os.makedirs(os.path.join(base_folder, f"t_{t}"), exist_ok=True)
+        if world_size > 1 and dist.is_available() and dist.is_initialized():
+            dist.barrier()
+
+        # Use all timesteps from num_timesteps-1 down to 0
+        seq = list(range(0, self.num_timesteps))  # [0, 1, ..., 999]
+        desired_set = set(desired_timesteps)
+
+        remaining = my_target
+        n_rounds = math.ceil(remaining / batch_size)
+
+        with torch.no_grad():
+            for _ in tqdm.tqdm(
+                range(n_rounds), desc=f"Generating {my_target} samples with intermediates (rank {rank})"
+            ):
+                n = min(batch_size, remaining)
+                x = torch.randn(
+                    n,
+                    config.data.channels,
+                    config.data.image_size,
+                    config.data.image_size,
+                    device=self.device,
+                )
+
+                # Get the full sequence of samples
+                xs, _ = self.sample_image(x, model, last=False)
+
+                # Save images at desired timesteps
+                seq_next = [-1] + seq[:-1]
+                ts = [self.num_timesteps] + list(reversed(seq_next))  # [1000, 999, 998, ..., 0]
+                for i, t in enumerate(ts):
+                    if t == -1:
+                        t = 0
+                    if t in desired_set:
+                        x_t = inverse_data_transform(config, xs[i].to(self.device))
+                        folder = os.path.join(base_folder, f"t_{t}")
+                        for j in range(x_t.size(0)):
+                            tvu.save_image(x_t[j], os.path.join(folder, f"{img_id + j}.png"))
+                
+                remaining -= n
+                img_id += n
+
+        if world_size > 1 and dist.is_available() and dist.is_initialized():
+            dist.barrier()
+    
     def sample_sequence(self, model):
         config = self.config
 
@@ -507,19 +589,23 @@ class Diffusion(object):
             xs = generalized_steps(x, seq, model, self.betas, eta=self.args.eta)
             x = xs
         elif self.args.sample_type == "ddpm_noisy":
-            if self.args.skip_type == "uniform":
-                skip = self.num_timesteps // self.args.timesteps
-                seq = range(0, self.num_timesteps, skip)
-            elif self.args.skip_type == "quad":
-                seq = (
-                    np.linspace(
-                        0, np.sqrt(self.num_timesteps * 0.8), self.args.timesteps
-                    )
-                    ** 2
-                )
-                seq = [int(s) for s in list(seq)]
+            # For intermediate sampling, use all timesteps or custom if provided
+            if self.args.intermediate_timesteps:
+                seq = list(range(0, self.num_timesteps))    # [0, 1, ..., 999]
             else:
-                raise NotImplementedError
+                if self.args.skip_type == "uniform":
+                    skip = self.num_timesteps // self.args.timesteps
+                    seq = range(0, self.num_timesteps, skip)
+                elif self.args.skip_type == "quad":
+                    seq = (
+                        np.linspace(
+                            0, np.sqrt(self.num_timesteps * 0.8), self.args.timesteps
+                        )
+                        ** 2
+                    )
+                    seq = [int(s) for s in list(seq)]
+                else:
+                    raise NotImplementedError
             from functions.denoising import ddpm_steps
 
             x = ddpm_steps(x, seq, model, self.betas)

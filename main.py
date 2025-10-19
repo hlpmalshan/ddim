@@ -119,9 +119,23 @@ def parse_args_and_config():
         help="Loss weighting type ('constant' or 'snr')"
     )
     
+    parser.add_argument(
+        "--intermediate_timesteps",
+        type=str,
+        default="",
+        help="Comma-separated list of timesteps to save intermediates at (e.g., '900,800,700,600,500,400,300,200,100,50,0')"
+    )
+    
     args = parser.parse_args()
     args.log_path = os.path.join(args.exp, "logs", args.doc)
 
+    # Parse intermediate_timesteps into a sorted list of integers
+    if args.intermediate_timesteps:
+        args.intermediate_timesteps = [int(s.strip()) for s in args.intermediate_timesteps.split(',')]
+        args.intermediate_timesteps = sorted(set(args.intermediate_timesteps), reverse=True)  # Sort descending
+    else:
+        args.intermediate_timesteps = []
+    
     # parse config file
     with open(os.path.join("configs", args.config), "r") as f:
         config = yaml.safe_load(f)
