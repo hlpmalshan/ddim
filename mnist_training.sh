@@ -79,26 +79,26 @@ run_main() {
 }
 
 # Function to create temporary YAML config with updated selected_digits
-make_cfg_with_digits() {
-  local digits="$1" in_rel="$2" out_rel="$3"
-  awk -v digits="[$digits]" '
-    BEGIN { in_data=0 }
-    /^[[:space:]]*data:[[:space:]]*$/ { in_data=1; print; next }
-    /^[^[:space:]]/ { if (in_data) in_data=0 }
-    {
-      if (in_data && $1 ~ /^selected_digits:/) {
-        sub(/selected_digits:[[:space:]]*\[[^]]*\]/, "selected_digits: " digits)
-      }
-      print
-    }
-    END {
-      if (!in_data && digits != "[]") {
-        print "data:"
-        print "  selected_digits: " digits
-      }
-    }
-  ' "$in_rel" > "$out_rel"
-}
+# make_cfg_with_digits() {
+#   local digits="$1" in_rel="$2" out_rel="$3"
+#   awk -v digits="[$digits]" '
+#     BEGIN { in_data=0 }
+#     /^[[:space:]]*data:[[:space:]]*$/ { in_data=1; print; next }
+#     /^[^[:space:]]/ { if (in_data) in_data=0 }
+#     {
+#       if (in_data && $1 ~ /^selected_digits:/) {
+#         sub(/selected_digits:[[:space:]]*\[[^]]*\]/, "selected_digits: " digits)
+#       }
+#       print
+#     }
+#     END {
+#       if (!in_data && digits != "[]") {
+#         print "data:"
+#         print "  selected_digits: " digits
+#       }
+#     }
+#   ' "$in_rel" > "$out_rel"
+# }
 
 # make_cfg_with_digits() {
 #   local digits="$1" in_rel="$2" out_rel="$3"
@@ -130,27 +130,27 @@ for reg in "${reg_values[@]}"; do
   # Create log directories if they don't exist
   mkdir -p "$LOGS_DIR" "$REG_LOG_DIR"
 
-  # Create temporary YAML config
-  TEMP_CONFIG="temp_mnist_${reg}_${digits_str:-all}.yml"
-  make_cfg_with_digits "$SELECTED_DIGITS" "configs/$BASE_CONFIG" "configs/$TEMP_CONFIG"
+  # # Create temporary YAML config
+  # TEMP_CONFIG="temp_mnist_${reg}_${digits_str:-all}.yml"
+  # make_cfg_with_digits "$SELECTED_DIGITS" "configs/$BASE_CONFIG" "configs/$TEMP_CONFIG"
 
-  echo "Base YAML content (configs/$BASE_CONFIG):"
-  cat "configs/$BASE_CONFIG"
+  # echo "Base YAML content (configs/$BASE_CONFIG):"
+  # cat "configs/$BASE_CONFIG"
 
-  echo "Temporary YAML content for reg=$reg (configs/$TEMP_CONFIG):"
-  cat "configs/$TEMP_CONFIG"
+  # echo "Temporary YAML content for reg=$reg (configs/$TEMP_CONFIG):"
+  # cat "configs/$TEMP_CONFIG"
 
-  # Check if the temporary YAML was created successfully
-  if [ ! -f "configs/$TEMP_CONFIG" ]; then
-    echo "Error: Failed to create temporary config 'configs/$TEMP_CONFIG'."
-    exit 1
-  fi
+  # # Check if the temporary YAML was created successfully
+  # if [ ! -f "configs/$TEMP_CONFIG" ]; then
+  #   echo "Error: Failed to create temporary config 'configs/$TEMP_CONFIG'."
+  #   exit 1
+  # fi
 
   echo "[Train] MNIST, reg=$reg, digits=${SELECTED_DIGITS:-all}"
   # If no checkpoints yet, run training; otherwise skip
   if [ "$RESUME"=true ] ||  ! compgen -G "$REG_LOG_DIR/ckpt_*.pth" > /dev/null; then
     run_main \
-      --config "$TEMP_CONFIG" \
+      --config "$BASE_CONFIG" \
       --exp "$EXP_ROOT" \
       --doc "$DOC" \
       --reg "$reg" \

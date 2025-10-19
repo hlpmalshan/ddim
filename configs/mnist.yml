@@ -8,7 +8,7 @@ data:
     random_flip: false  # No flipping for MNIST digits, as orientation matters
     rescaled: true  # Rescale pixel values to [-1, 1], standard for diffusion models
     num_workers: 16  # Same as CIFAR10, reasonable for data loading
-    selected_digits: []  # Train only on digit 1, as specified
+    selected_digits: [1,8]  # Train only on digit 1, as specified
 
 model:
     type: "iso"  # Changed from "iso" to match original MNIST config, simpler architecture suits MNIST
