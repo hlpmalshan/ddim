@@ -100,18 +100,26 @@ run_main() {
 #   ' "$in_rel" > "$out_rel"
 # }
 
+# make_cfg_with_digits() {
+#   local digits="$1" in_rel="$2" out_rel="$3"
+#   cp "$in_rel" "$out_rel"
+#   if command -v yq >/dev/null 2>&1; then
+#     yq eval ".data.selected_digits = [$digits]" -i "$out_rel"
+#   else
+#     if grep -q "^  selected_digits:" "$out_rel"; then
+#       sed -i "s|^  selected_digits:.*|  selected_digits: [$digits]|" "$out_rel"
+#     else
+#       sed -i "/^data:/a\  selected_digits: [$digits]" "$out_rel"
+#     fi
+#   fi
+# }
+
 make_cfg_with_digits() {
   local digits="$1" in_rel="$2" out_rel="$3"
+  # Copy the input YAML to preserve all fields
   cp "$in_rel" "$out_rel"
-  if command -v yq >/dev/null 2>&1; then
-    yq eval ".data.selected_digits = [$digits]" -i "$out_rel"
-  else
-    if grep -q "^  selected_digits:" "$out_rel"; then
-      sed -i "s|^  selected_digits:.*|  selected_digits: [$digits]|" "$out_rel"
-    else
-      sed -i "/^data:/a\  selected_digits: [$digits]" "$out_rel"
-    fi
-  fi
+  # Update selected_digits in-place, ensuring correct indentation
+  sed -i "/^[[:space:]]*data:/,/^[[:space:]]*[a-zA-Z]/ s/^[[:space:]]*selected_digits:.*/  selected_digits: [$digits]/" "$out_rel"
 }
 
 for reg in "${reg_values[@]}"; do
