@@ -79,25 +79,39 @@ run_main() {
 }
 
 # Function to create temporary YAML config with updated selected_digits
+# make_cfg_with_digits() {
+#   local digits="$1" in_rel="$2" out_rel="$3"
+#   awk -v digits="[$digits]" '
+#     BEGIN { in_data=0 }
+#     /^[[:space:]]*data:[[:space:]]*$/ { in_data=1; print; next }
+#     /^[^[:space:]]/ { if (in_data) in_data=0 }
+#     {
+#       if (in_data && $1 ~ /^selected_digits:/) {
+#         sub(/selected_digits:[[:space:]]*\[[^]]*\]/, "selected_digits: " digits)
+#       }
+#       print
+#     }
+#     END {
+#       if (!in_data && digits != "[]") {
+#         print "data:"
+#         print "  selected_digits: " digits
+#       }
+#     }
+#   ' "$in_rel" > "$out_rel"
+# }
+
 make_cfg_with_digits() {
   local digits="$1" in_rel="$2" out_rel="$3"
-  awk -v digits="[$digits]" '
-    BEGIN { in_data=0 }
-    /^[[:space:]]*data:[[:space:]]*$/ { in_data=1; print; next }
-    /^[^[:space:]]/ { if (in_data) in_data=0 }
-    {
-      if (in_data && $1 ~ /^selected_digits:/) {
-        sub(/selected_digits:[[:space:]]*\[[^]]*\]/, "selected_digits: " digits)
-      }
-      print
-    }
-    END {
-      if (!in_data && digits != "[]") {
-        print "data:"
-        print "  selected_digits: " digits
-      }
-    }
-  ' "$in_rel" > "$out_rel"
+  cp "$in_rel" "$out_rel"
+  if command -v yq >/dev/null 2>&1; then
+    yq eval ".data.selected_digits = [$digits]" -i "$out_rel"
+  else
+    if grep -q "^  selected_digits:" "$out_rel"; then
+      sed -i "s|^  selected_digits:.*|  selected_digits: [$digits]|" "$out_rel"
+    else
+      sed -i "/^data:/a\  selected_digits: [$digits]" "$out_rel"
+    fi
+  fi
 }
 
 for reg in "${reg_values[@]}"; do
