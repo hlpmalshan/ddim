@@ -148,7 +148,8 @@ for reg in "${reg_values[@]}"; do
 
   echo "[Train] MNIST, reg=$reg, digits=${SELECTED_DIGITS:-all}"
   # If no checkpoints yet, run training; otherwise skip
-  if [ "$RESUME"=true ] ||  ! compgen -G "$REG_LOG_DIR/ckpt_*.pth" > /dev/null; then
+  # if [ "$RESUME"=true ] ||  ! compgen -G "$REG_LOG_DIR/ckpt_*.pth" > /dev/null; then
+  if ! compgen -G "$REG_LOG_DIR/ckpt_*.pth" > /dev/null; then
     run_main \
       --config "$BASE_CONFIG" \
       --exp "$EXP_ROOT" \
@@ -161,7 +162,7 @@ for reg in "${reg_values[@]}"; do
   fi
 
   # Clean up temporary YAML file
-  [ -f "configs/$TEMP_CONFIG" ] && rm "configs/$TEMP_CONFIG"
+  # [ -f "configs/$TEMP_CONFIG" ] && rm "configs/$TEMP_CONFIG"
 done
 
 echo "MNIST training completed."
