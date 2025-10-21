@@ -166,4 +166,4 @@ if __name__ == "__main__":
     p.add_argument("--batch_size", type=int, default=64)
     p.add_argument("--nearest_k",  type=int, default=5)
     args = p.parse_args()
-    main(args.image_path, args.label_path, args.gen_dir, args.digit, args.batch_size, args.nearest_k)
+    main(args.image_path, args.label_path, args.gen_dir, args.digits, args.batch_size, args.nearest_k)
