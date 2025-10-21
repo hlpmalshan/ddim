@@ -22,8 +22,8 @@ EXP_ROOT="ddim_mnist_digits_1_8"  # adjust if digits change
 DATA_ROOT="ddim_mnist_digits_1_8"  # where datasets live
 
 # MNIST data files
-MNIST_IMAGE_PATH="$DATA_ROOT/train-images-idx3-ubyte"
-MNIST_LABEL_PATH="$DATA_ROOT/train-labels-idx1-ubyte"
+MNIST_IMAGE_PATH="$DATA_ROOT/datasets/mnist/MNIST/raw/train-images-idx3-ubyte"
+MNIST_LABEL_PATH="$DATA_ROOT/datasets/mnist/MNIST/raw/train-labels-idx1-ubyte"
 
 # Output / logs
 LOGS_DIR="$EXP_ROOT/logs"
