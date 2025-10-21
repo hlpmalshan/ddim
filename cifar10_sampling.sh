@@ -50,10 +50,7 @@ run_main() {
         NPROC_PER_NODE=${#_gpu_array[@]}
       fi
     fi
-    if [ "${NPROC_PER_NODE}" -le 0 ]; then
-      echo "[WARN] NPROC_PER_NODE not set; defaulting to 1"
-      NPROC_PER_NODE=1
-    fi
+    [ "${NPROC_PER_NODE}" -le 0 ] && NPROC_PER_NODE=1
     export OMP_NUM_THREADS=${OMP_NUM_THREADS:-1}
     export NCCL_DEBUG=${NCCL_DEBUG:-WARN}
     export NCCL_IB_DISABLE=${NCCL_IB_DISABLE:-1}
@@ -70,20 +67,17 @@ run_main() {
 make_cfg_with_ckpt() {
   local step="$1" in_rel="$2" out_rel="$3"
   awk -v step="$step" '
-    BEGIN{in_sampling=0; saw_ckpt=0}
-    /^[[:space:]]*sampling:[[:space:]]*$/ {in_sampling=1; print; next}
-    in_sampling && /^[^[:space:]]/ {
-      if(!saw_ckpt) print "  ckpt_id: " step
-      in_sampling=0
+    BEGIN { in_sampling=0; saw_ckpt=0 }
+    /^[[:space:]]*sampling:[[:space:]]*$/ { in_sampling=1; print; next }
+    in_sampling && /^[[:space:]]*[^[:space:]]/ && !/^[[:space:]]*ckpt_id:/ {
+      if (!saw_ckpt) print "  ckpt_id: " step;
+      in_sampling=0; saw_ckpt=1
     }
     {
-      if(in_sampling && $1 ~ /^ckpt_id:/){
+      if (in_sampling && $1 ~ /^ckpt_id:/) {
         sub(/ckpt_id:[[:space:]]*[0-9]+/, "ckpt_id: " step); saw_ckpt=1
       }
       print
-    }
-    END{
-      if(in_sampling && !saw_ckpt) print "  ckpt_id: " step
     }
   ' "configs/${in_rel}" > "configs/${out_rel}"
 }
