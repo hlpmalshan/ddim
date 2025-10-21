@@ -41,7 +41,7 @@ training:
 sampling:
     batch_size: 64  # Same as CIFAR10, good for generating samples
     last_only: True  # Same as CIFAR10, focuses on final samples
-    n_samples: 10050
+    n_samples: 20050
     ckpt_id: 10000
 
 optim:

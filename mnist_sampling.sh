@@ -99,7 +99,7 @@ ckpt_path_for() {
 
 parse_eval_to_csv_row() {
   local txt="$1" reg="$2" step="$3"
-  local fid is_mean is_std precision recall density coverage
+  local fid precision recall density coverage is_mean is_std 
   fid=$(awk -F": " '/^FID:/ {print $2}' "$txt" | head -n1 || true)
   precision=$(awk -F": " '/^Precision:/ {print $2}' "$txt" | head -n1 || true)
   recall=$(awk -F": "    '/^Recall:/ {print $2}' "$txt"    | head -n1 || true)
