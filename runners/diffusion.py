@@ -178,10 +178,12 @@ class Diffusion(object):
         batch_norm_mean_list = np.zeros(config.training.n_iters, dtype=float)
         batch_norm_standard_deviation_list = np.zeros(config.training.n_iters, dtype=float)
         if self.args.resume_training:
+            ckpt_name = "ckpt_200000.pth" if "celeba" in os.path.basename(self.args.config) else "ckpt.pth"
             states = torch.load(
-                os.path.join(self.args.log_path, "ckpt.pth"),
+                os.path.join(self.args.log_path, ckpt_name),
                 map_location=self.device,
             )
+
             model_to_load = model.module if isinstance(model, DDP) else model
             model_to_load.load_state_dict(states[0])
 

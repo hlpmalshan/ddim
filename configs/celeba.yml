@@ -31,16 +31,17 @@ diffusion:
     num_diffusion_timesteps: 1000
 
 training:
-    batch_size: 19
-    n_epochs: 10000
+    batch_size: 64
+    n_epochs: 1382
     n_iters: 500000
-    snapshot_freq: 20000
-    validation_freq: 20000
+    snapshot_freq: 40000
+    # validation_freq: 20000
 
 sampling:
-    batch_size: 512
+    batch_size: 1024
     last_only: True
     n_samples: 50000
+    ckpt_id: 10000
 
 optim:
     weight_decay: 0.000

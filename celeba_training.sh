@@ -64,17 +64,13 @@ for reg in "${reg_values[@]}"; do
   REG_LOG_DIR="$LOGS_DIR/$DOC"
 
   echo "[Train] CelebA, reg=$reg"
-  # If no checkpoints yet, run training; otherwise skip
-  if ! compgen -G "$REG_LOG_DIR/ckpt_*.pth" > /dev/null; then
     run_main \
       --config "$BASE_CONFIG" \
       --exp "$EXP_ROOT" \
       --doc "$DOC" \
       --reg "$reg" \
+      --resume_training \
       --timesteps "$TIMESTEPS" --eta "$ETA" --ni
-  else
-    echo "Checkpoints already present in $REG_LOG_DIR — skipping training."
-  fi
 done
 
 echo "CelebA training completed."

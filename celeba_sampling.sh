@@ -28,6 +28,7 @@ GPUS=${GPUS:-}
 NPROC_PER_NODE=${NPROC_PER_NODE:-0}
 MASTER_PORT=${MASTER_PORT:-29501}
 DIST_BACKEND=${DIST_BACKEND:-nccl}
+
 # -------- Helpers --------
 run_main() {
   if [ "$DISTRIBUTED" = true ]; then
@@ -52,15 +53,24 @@ run_main() {
   fi
 }
 
+# Ensure ckpt_id appears inside the sampling: block (update if present, insert if missing)
 make_cfg_with_ckpt() {
   local step="$1" in_rel="$2" out_rel="$3"
   awk -v step="$step" '
-    BEGIN{in_sampling=0}
+    BEGIN{in_sampling=0; saw_ckpt=0}
     /^[[:space:]]*sampling:[[:space:]]*$/ {in_sampling=1; print; next}
-    /^[^[:space:]]/ { if (in_sampling) in_sampling=0 }
+    in_sampling && /^[^[:space:]]/ {
+      if(!saw_ckpt) print "  ckpt_id: " step
+      in_sampling=0
+    }
     {
-      if (in_sampling && $1 ~ /^ckpt_id:/) sub(/ckpt_id:[[:space:]]*[0-9]+/, "ckpt_id: " step)
+      if(in_sampling && $1 ~ /^ckpt_id:/){
+        sub(/ckpt_id:[[:space:]]*[0-9]+/, "ckpt_id: " step); saw_ckpt=1
+      }
       print
+    }
+    END{
+      if(in_sampling && !saw_ckpt) print "  ckpt_id: " step
     }
   ' "configs/${in_rel}" > "configs/${out_rel}"
 }
@@ -141,7 +151,6 @@ for step in "${STEPS[@]}"; do
       --gen_dir  "$GEN_DIR" | tee "$EVAL_TXT"
 
     CSV_OUT="$REG_LOG_DIR/eval_summary.csv"
-    # Append if exists; otherwise create header + first row (no dir creation).
     if [ -f "$CSV_OUT" ]; then
       parse_eval_to_csv_row "$EVAL_TXT" "$reg" "$step" >> "$CSV_OUT"
     else
