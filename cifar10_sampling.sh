@@ -70,7 +70,7 @@ make_cfg_with_ckpt() {
     BEGIN { in_sampling=0; saw_ckpt=0 }
     /^[[:space:]]*sampling:[[:space:]]*$/ { in_sampling=1; print; next }
     in_sampling && /^[[:space:]]*[^[:space:]]/ && !/^[[:space:]]*ckpt_id:/ {
-      if (!saw_ckpt) print "  ckpt_id: " step;
+      if (!saw_ckpt) print "   ckpt_id: " step;
       in_sampling=0; saw_ckpt=1
     }
     {
