@@ -28,7 +28,7 @@ MNIST_LABEL_PATH="$DATA_ROOT/train-labels-idx1-ubyte"
 # Output / logs
 LOGS_DIR="$EXP_ROOT/logs"
 GEN_BASE="$EXP_ROOT/image_samples"
-EVAL_SCRIPT="evaluation.py"  # the multi-digit evaluation script
+EVAL_SCRIPT="evaluation_mnist_multiple_digits.py"  # the multi-digit evaluation script
 
 # Sampling params
 TIMESTEPS=${TIMESTEPS:-1000}
