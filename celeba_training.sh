@@ -6,7 +6,7 @@ shopt -s nullglob
 
 # -------- Configurable knobs --------
 # Regularization values to sweep
-reg_values=(0.0 0.3)
+reg_values=(0.3)
 
 # Base config to use for training (relative to configs/)
 BASE_CONFIG="celeba.yml"
@@ -15,7 +15,7 @@ BASE_CONFIG="celeba.yml"
 EXP_ROOT="ddim_celeba"
 
 # Single-GPU settings (used when DISTRIBUTED=false)
-GPU_ID=0
+GPU_ID=1
 
 # Multi-GPU (DDP) toggle and settings
 DISTRIBUTED=${DISTRIBUTED:-false}
@@ -60,7 +60,7 @@ run_main() {
 
 for reg in "${reg_values[@]}"; do
   echo "=== reg=$reg ==="
-  DOC="ddim_iso_${reg}"
+  DOC="ddim_iso_${reg}_2"
   REG_LOG_DIR="$LOGS_DIR/$DOC"
 
   echo "[Train] CelebA, reg=$reg"
@@ -69,7 +69,7 @@ for reg in "${reg_values[@]}"; do
       --exp "$EXP_ROOT" \
       --doc "$DOC" \
       --reg "$reg" \
-      --resume_training \
+      # --resume_training \
       --timesteps "$TIMESTEPS" --eta "$ETA" --ni
 done
 

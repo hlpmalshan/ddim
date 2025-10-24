@@ -33,8 +33,8 @@ diffusion:
 
 training:
     batch_size: 64  # Increased from 32, but smaller than CIFAR10’s 128 due to smaller dataset
-    n_epochs: 508  # Reduced from 1000, single-digit dataset is smaller and needs less training
-    n_iters: 100000  # Reduced proportionally to dataset size and epochs
+    n_epochs: 1016  # Reduced from 1000, single-digit dataset is smaller and needs less training
+    n_iters: 200000  # Reduced proportionally to dataset size and epochs
     snapshot_freq: 10000  # Adjusted for fewer iterations, saves model periodically
     # validation_freq: 2000  # Uncomment if validation is needed, same as CIFAR10
 

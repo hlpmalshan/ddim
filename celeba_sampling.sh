@@ -5,7 +5,8 @@ shopt -s nullglob
 
 # -------- Config --------
 reg_values=(0.0 0.3)
-CKPT_STEPS=(200000 160000 120000 80000 40000)                 # leave empty () to auto-discover union across regs
+CKPT_STEPS=(60000)                 # leave empty () to auto-discover union across regs
+#CKPT_STEPS=(20000)
 BASE_CONFIG="celeba.yml"
 
 EXP_ROOT="ddim_celeba"
@@ -22,7 +23,7 @@ TIMESTEPS=${TIMESTEPS:-1000}
 ETA=${ETA:-1}
 
 # Single-GPU / DDP
-GPU_ID=${GPU_ID:-0}
+GPU_ID=${GPU_ID:-2}
 DISTRIBUTED=${DISTRIBUTED:-false}
 GPUS=${GPUS:-}
 NPROC_PER_NODE=${NPROC_PER_NODE:-0}

@@ -31,10 +31,10 @@ diffusion:
     num_diffusion_timesteps: 1000
 
 training:
-    batch_size: 64
-    n_epochs: 1382
+    batch_size: 128
+    n_epochs: 3907
     n_iters: 500000
-    snapshot_freq: 40000
+    snapshot_freq: 50000
     # validation_freq: 20000
 
 sampling:
