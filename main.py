@@ -142,6 +142,7 @@ def parse_args_and_config():
     new_config = dict2namespace(config)
 
     tb_path = os.path.join(args.exp, "tensorboard", args.doc)
+    os.makedirs(tb_path, exist_ok=True)
 
     env_world_size = int(os.environ.get("WORLD_SIZE", "1"))
     using_env_dist = env_world_size > 1 or "LOCAL_RANK" in os.environ or "RANK" in os.environ
@@ -191,13 +192,15 @@ def parse_args_and_config():
                     shutil.rmtree(args.log_path)
                     shutil.rmtree(tb_path)
                     os.makedirs(args.log_path)
-                    if os.path.exists(tb_path):
-                        shutil.rmtree(tb_path)
+                    os.makedirs(tb_path, exist_ok=True)
+                    # if os.path.exists(tb_path):
+                    #     shutil.rmtree(tb_path)
                 else:
                     print("Folder exists. Program halted.")
                     sys.exit(0)
             elif is_main_process:
                 os.makedirs(args.log_path)
+                os.makedirs(tb_path, exist_ok=True)
 
             if is_main_process:
                 with open(os.path.join(args.log_path, "config.yml"), "w") as f:
