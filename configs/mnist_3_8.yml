@@ -1,0 +1,54 @@
+data:
+    dataset: "MNIST"
+    image_size: 32  # Padded from 28x28 for UNet compatibility
+    channels: 1  # Grayscale images
+    logit_transform: false  # No need for logit transform, consistent with CIFAR10
+    uniform_dequantization: true  # Matches CIFAR10, helps with noise robustness
+    gaussian_dequantization: false  # Consistent with CIFAR10, avoids Gaussian noise
+    random_flip: false  # No flipping for MNIST digits, as orientation matters
+    rescaled: true  # Rescale pixel values to [-1, 1], standard for diffusion models
+    num_workers: 16  # Same as CIFAR10, reasonable for data loading
+    selected_digits: [3,8]  # Train only on digit 1, as specified
+
+model:
+    type: "iso"  # Changed from "iso" to match original MNIST config, simpler architecture suits MNIST
+    in_channels: 1  # Single channel for grayscale
+    out_ch: 1  # Single channel output
+    ch: 64  # Reduced from 128, MNIST digits are simpler than CIFAR10 images
+    ch_mult: [1, 2, 2, 2]  # Simplified from [1, 2, 2, 2], reduces model capacity for single-digit task
+    num_res_blocks: 2  # Reduced from 3, sufficient for simpler MNIST patterns
+    attn_resolutions: [16]  # Simplified, attention at 16x16 is enough for 32x32 images
+    dropout: 0.1  # Same as CIFAR10, reasonable for regularization
+    var_type: fixedlarge  # Same as CIFAR10, standard for diffusion models
+    ema_rate: 0.9999  # Same as CIFAR10, good for stable training
+    ema: True  # Same as CIFAR10, improves model performance
+    resamp_with_conv: True  # Same as CIFAR10, standard for diffusion models
+    save_statistics: False  # Save batch mean and std, consistent with both configs
+
+diffusion:
+    beta_schedule: linear  # Same as CIFAR10, simple and effective
+    beta_start: 0.0001  # Same as original MNIST, suitable for simpler data
+    beta_end: 0.02  # Same as original MNIST, maintains noise schedule
+    num_diffusion_timesteps: 1000  # Same as original MNIST, sufficient for single-digit task
+
+training:
+    batch_size: 64  # Increased from 32, but smaller than CIFAR10’s 128 due to smaller dataset
+    n_epochs: 1016  # Reduced from 1000, single-digit dataset is smaller and needs less training
+    n_iters: 200000  # Reduced proportionally to dataset size and epochs
+    snapshot_freq: 10000  # Adjusted for fewer iterations, saves model periodically
+    # validation_freq: 2000  # Uncomment if validation is needed, same as CIFAR10
+
+sampling:
+    batch_size: 64  # Same as CIFAR10, good for generating samples
+    last_only: True  # Same as CIFAR10, focuses on final samples
+    n_samples: 20050
+    ckpt_id: 10000
+
+optim:
+    weight_decay: 0.000  # Same as CIFAR10, no weight decay needed
+    optimizer: "Adam"  # Same as CIFAR10, standard choice
+    lr: 0.0002  # Slightly increased from 0.0001, helps faster convergence for simpler task
+    beta1: 0.9  # Same as CIFAR10, standard for Adam
+    amsgrad: false  # Same as CIFAR10, no need for AMSGrad
+    eps: 0.00000001  # Same as CIFAR10, ensures numerical stability
+    grad_clip: 1.0  # Same as CIFAR10, prevents gradient explosion
