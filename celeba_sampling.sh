@@ -4,8 +4,8 @@ set -euo pipefail
 shopt -s nullglob
 
 # -------- Config --------
-reg_values=(0.0 0.3)
-CKPT_STEPS=(60000)                 # leave empty () to auto-discover union across regs
+reg_values=(0.3)
+CKPT_STEPS=( 500000 400000 300000 200000 100000)                 # leave empty () to auto-discover union across regs
 #CKPT_STEPS=(20000)
 BASE_CONFIG="celeba.yml"
 
@@ -23,7 +23,7 @@ TIMESTEPS=${TIMESTEPS:-1000}
 ETA=${ETA:-1}
 
 # Single-GPU / DDP
-GPU_ID=${GPU_ID:-2}
+GPU_ID=${GPU_ID:-1}
 DISTRIBUTED=${DISTRIBUTED:-false}
 GPUS=${GPUS:-}
 NPROC_PER_NODE=${NPROC_PER_NODE:-0}
@@ -86,7 +86,7 @@ discover_steps_for_reg() {
 
 ckpt_path_for() {
   local reg="$1" step="$2"
-  echo "$LOGS_DIR/ddim_iso_${reg}/ckpt_${step}.pth"
+  echo "$LOGS_DIR/ddim_iso_${reg}_2/ckpt_${step}.pth"
 }
 
 parse_eval_to_csv_row() {
@@ -118,7 +118,7 @@ fi
 for step in "${STEPS[@]}"; do
   echo "=== STEP $step ==="
   for reg in "${reg_values[@]}"; do
-    DOC="ddim_iso_${reg}"
+    DOC="ddim_iso_${reg}_2"
     REG_LOG_DIR="$LOGS_DIR/$DOC"
     REG_GEN_DIR="$GEN_BASE"
 
@@ -129,7 +129,7 @@ for step in "${STEPS[@]}"; do
     fi
 
     echo "--- Sampling & Evaluating: reg=$reg, step=$step ---"
-    IDIR="celeba_iso_${reg}_s${step}"
+    IDIR="celeba_iso_${reg}_2_s${step}"
     GEN_DIR="$REG_GEN_DIR/$IDIR"
 
     TMP_CFG_NAME="_tmp_celeba_ckpt_${step}.yml"
