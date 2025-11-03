@@ -60,7 +60,7 @@ run_main() {
 
 for reg in "${reg_values[@]}"; do
   echo "=== reg=$reg ==="
-  DOC="ddim_iso_${reg}"
+  DOC="ddim_iso_${reg}_run2"
   REG_LOG_DIR="$LOGS_DIR/$DOC"
 
   echo "[Train] OXFOR_PET, reg=$reg"

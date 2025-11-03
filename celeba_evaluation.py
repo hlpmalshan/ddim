@@ -63,13 +63,18 @@ def main(args):
 
     metrics = torch_fidelity.calculate_metrics(
         input1=gen_tmp, input2=real_tmp, cuda=torch.cuda.is_available(),
-        fid=True, verbose=False, samples_find_deep=False
+        fid=True, isc=True, verbose=False, samples_find_deep=False
     )
     
     fid_score = metrics["frechet_inception_distance"]
+    is_mean = metrics['inception_score_mean']
+    is_std = metrics['inception_score_std']
+    
     print("\n==== CelebA (preprocessed REAL 64×64; GEN 64×64) ====")
     print(f"Images per set: {n}")
     print(f"FID: {fid_score:.4f}")
+    print(f"IS Mean: {is_mean:.4f}")
+    print(f"IS STD: {is_std:.4f}")
     
     # ---- PRDC (same tensor pipeline) ----
     prdc_tf = transforms.Compose([transforms.Resize(64), transforms.CenterCrop(64), transforms.ToTensor()])

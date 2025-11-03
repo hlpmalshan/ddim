@@ -8,7 +8,7 @@ data:
     random_flip: true
     rescaled: true
     num_workers: 4
-    # selected_classes: [5, 9] # [5, 8], [8, 9]
+    selected_classes: [5, 8] # [5, 8], [8, 9]
     num_classes: 2
 
 model:
@@ -35,7 +35,7 @@ diffusion:
 
 training:
     batch_size: 128 
-    n_epochs: 2000
+    n_epochs: 4200
     n_iters: 200000
     snapshot_freq: 25415
     # validation_freq: 2000

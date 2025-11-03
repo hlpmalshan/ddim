@@ -9,7 +9,7 @@ shopt -s nullglob
 
 # -------- Configurable knobs --------
 # Regularization values to sweep
-reg_values=(0.3)
+reg_values=(0.0 0.3)
 
 # Base config to use for training (relative to configs/)
 BASE_CONFIG="cifar10.yml"
@@ -18,7 +18,7 @@ BASE_CONFIG="cifar10.yml"
 EXP_ROOT="ddim_cifar10_5_8"
 
 # Single-GPU settings (used when DISTRIBUTED=false)
-GPU_ID=0
+GPU_ID=5
 
 # Multi-GPU (DDP) toggle and settings
 DISTRIBUTED=${DISTRIBUTED:-false}
@@ -75,7 +75,7 @@ for reg in "${reg_values[@]}"; do
       --exp "$EXP_ROOT" \
       --doc "$DOC" \
       --reg "$reg" \
-      # --resume_training \
+      --resume_training \
       --timesteps "$TIMESTEPS" --eta "$ETA" --ni
   else
       run_main \
