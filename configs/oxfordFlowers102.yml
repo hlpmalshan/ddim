@@ -32,15 +32,14 @@ diffusion:
 
 training:
     batch_size: 4             # Training batch size
-    n_epochs: 1600              # Number of training epochs
-    n_iters: 408000            # Total training iterations
+    n_epochs: 3200              # Number of training epochs
+    n_iters: 816000            # Total training iterations
     snapshot_freq: 20400          # Snapshot frequency
     #validation_freq: 2000       # Validation frequency
 
 sampling:
     batch_size: 8              # Sampling batch size
     last_only: True             # Only return the last timestep samples
-    ckpt_id: 408000
     n_samples: 8200
 
 optim:

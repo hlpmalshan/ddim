@@ -148,13 +148,14 @@ for reg in "${reg_values[@]}"; do
 
   echo "[Train] MNIST, reg=$reg, digits=${SELECTED_DIGITS:-all}"
   # If no checkpoints yet, run training; otherwise skip
-  # if [ "$RESUME"=true ] ||  ! compgen -G "$REG_LOG_DIR/ckpt_*.pth" > /dev/null; then
-  if ! compgen -G "$REG_LOG_DIR/ckpt_*.pth" > /dev/null; then
+  if [ "$RESUME"=true ] ||  ! compgen -G "$REG_LOG_DIR/ckpt_*.pth" > /dev/null; then
+  # if ! compgen -G "$REG_LOG_DIR/ckpt_*.pth" > /dev/null; then
     run_main \
       --config "$BASE_CONFIG" \
       --exp "$EXP_ROOT" \
       --doc "$DOC" \
       --reg "$reg" \
+      --resume_training \
       --timesteps "$TIMESTEPS" --eta "$ETA" --ni
   else
     echo "Checkpoints already present in $REG_LOG_DIR and RESUME=false — skipping training."

@@ -3,8 +3,8 @@ set -euo pipefail
 shopt -s nullglob
 
 # ---------- Config ----------
-reg_values=(0.0 0.3)
-CKPT_STEPS=(500000 400000 300000 200000 100000)  # leave empty () to auto-discover
+reg_values=(0.3)
+CKPT_STEPS=(500000)  # leave empty () to auto-discover
 
 BASE_CONFIG="celebahq.yml"   # under configs/
 
@@ -15,7 +15,7 @@ REAL_DIR="$DATA_ROOT/datasets/celebahq/celebahq256/celebahq256_imgs"
 
 LOGS_DIR="$EXP_ROOT/logs"
 GEN_BASE="$EXP_ROOT/image_samples"
-EVAL_SCRIPT="celebahq_eval.py"   # prints FID + PRDC
+EVAL_SCRIPT="celebahq_evaluation.py"   # prints FID + PRDC
 
 # Sampling params
 TIMESTEPS=${TIMESTEPS:-1000}

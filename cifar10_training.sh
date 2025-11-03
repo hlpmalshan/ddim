@@ -9,13 +9,13 @@ shopt -s nullglob
 
 # -------- Configurable knobs --------
 # Regularization values to sweep
-reg_values=(0.0 0.3)
+reg_values=(0.3)
 
 # Base config to use for training (relative to configs/)
 BASE_CONFIG="cifar10.yml"
 
 # Experiment root (where logs/ and datasets/ live)
-EXP_ROOT="ddim_cifar10"
+EXP_ROOT="ddim_cifar10_5_8"
 
 # Single-GPU settings (used when DISTRIBUTED=false)
 GPU_ID=0
@@ -30,7 +30,7 @@ DIST_BACKEND=${DIST_BACKEND:-nccl}
 # Training params
 TIMESTEPS=${TIMESTEPS:-1000}
 ETA=${ETA:-1}
-RESUME=${RESUME:-true}
+RESUME=${RESUME:-false}
 
 # Derived dirs
 LOGS_DIR="$EXP_ROOT/logs"
@@ -75,9 +75,15 @@ for reg in "${reg_values[@]}"; do
       --exp "$EXP_ROOT" \
       --doc "$DOC" \
       --reg "$reg" \
-      --resume_training \
+      # --resume_training \
       --timesteps "$TIMESTEPS" --eta "$ETA" --ni
   else
+      run_main \
+      --config "$BASE_CONFIG" \
+      --exp "$EXP_ROOT" \
+      --doc "$DOC" \
+      --reg "$reg" \
+      --timesteps "$TIMESTEPS" --eta "$ETA" --ni
     echo "Checkpoints already present in $REG_LOG_DIR and RESUME=false — skipping training."
   fi
 done

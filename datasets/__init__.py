@@ -52,6 +52,7 @@ def get_dataset(args, config):
             ]
         )
 
+
     if config.data.dataset == "CIFAR10":
         dataset = CIFAR10(
             os.path.join(args.exp, "datasets", "cifar10"),
@@ -65,6 +66,31 @@ def get_dataset(args, config):
             download=True,
             transform=test_transform,
         )
+
+        # >>> ADD: class filtering like MNIST selected_digits
+        selected_classes = getattr(config.data, "selected_classes", None)  # e.g., [0,1,7]
+        remap_to_sequential = getattr(config.data, "remap_to_sequential", False)  # optional
+
+        if selected_classes:
+            selected_classes = list(map(int, selected_classes))
+            # optional label remap: old -> {0..K-1} in sorted order
+            if remap_to_sequential:
+                remap = {c: i for i, c in enumerate(sorted(selected_classes))}
+                def map_fn(t):
+                    return remap[int(t)] if int(t) in remap else -1
+                # set before subsetting so __getitem__ returns remapped labels
+                dataset.target_transform = map_fn
+                test_dataset.target_transform = map_fn
+
+            tr_idx = [i for i, t in enumerate(dataset.targets) if t in selected_classes]
+            te_idx = [i for i, t in enumerate(test_dataset.targets) if t in selected_classes]
+            dataset = Subset(dataset, tr_idx)
+            test_dataset = Subset(test_dataset, te_idx)
+
+            # keep num_classes in sync if present in config
+            if hasattr(config.data, "num_classes"):
+                config.data.num_classes = len(selected_classes)
+
 
     elif config.data.dataset == "CIFAR100":
         dataset = CIFAR100(
