@@ -26,7 +26,7 @@ IMAGE_SIZE=32
 # Output / logs
 LOGS_DIR="$EXP_ROOT/logs"
 GEN_BASE="$EXP_ROOT/image_samples"
-EVAL_SCRIPT="evaluation.py"
+EVAL_SCRIPT="classes_evaluation.py"
 
 # Sampling params
 TIMESTEPS=${TIMESTEPS:-1000}
@@ -170,6 +170,7 @@ for step in "${STEPS[@]}"; do
     EVAL_TXT="$REG_LOG_DIR/eval_ckpt_${step}.txt"
     python "$EVAL_SCRIPT" \
       --image_size "$IMAGE_SIZE" \
+      --classes "5,9" \
       --real_dir "$REAL_DIR" \
       --gen_dir  "$GEN_DIR" | tee "$EVAL_TXT"
 
