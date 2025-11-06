@@ -9,7 +9,7 @@ reg_values=(0.0 0.3)
 # EXACT checkpoint steps to process per run.
 # e.g., CKPT_STEPS=(120000 200000); leave empty () to auto-discover all.
 # CKPT_STEPS=( 508300 482885 457470 432055 406640 381225 355810 330395 304980 279565 254150 228735 203320 177905 152490 127075 101660 76245 50830 25415 )
-CKPT_STEPS=( 408000 326400 224400 122400 20400 )
+CKPT_STEPS=( 816000 )
 
 # Base config (relative to configs/)
 BASE_CONFIG="oxfordFlowers102.yml"
