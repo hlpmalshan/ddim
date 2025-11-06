@@ -15,7 +15,7 @@ BASE_CONFIG="oxfordIIITpet.yml"
 EXP_ROOT="ddim_ox_pet"
 
 # Single-GPU settings (used when DISTRIBUTED=false)
-GPU_ID=0
+GPU_ID=1
 
 # Multi-GPU (DDP) toggle and settings
 DISTRIBUTED=${DISTRIBUTED:-false}
@@ -65,12 +65,14 @@ for reg in "${reg_values[@]}"; do
 
   echo "[Train] OXFOR_PET, reg=$reg"
   # If no checkpoints yet, run training; otherwise skip
-  if ! compgen -G "$REG_LOG_DIR/ckpt_*.pth" > /dev/null; then
+  # if ! compgen -G "$REG_LOG_DIR/ckpt_*.pth" > /dev/null; then
+  if [ "$RESUME"=true ] ||  ! compgen -G "$REG_LOG_DIR/ckpt_*.pth" > /dev/null; then
     run_main \
       --config "$BASE_CONFIG" \
       --exp "$EXP_ROOT" \
       --doc "$DOC" \
       --reg "$reg" \
+      --resume_training \
       --timesteps "$TIMESTEPS" --eta "$ETA" --ni
   else
     echo "Checkpoints already present in $REG_LOG_DIR — skipping training."

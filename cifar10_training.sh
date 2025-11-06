@@ -15,10 +15,10 @@ reg_values=(0.0 0.3)
 BASE_CONFIG="cifar10.yml"
 
 # Experiment root (where logs/ and datasets/ live)
-EXP_ROOT="ddim_cifar10_5_8"
+EXP_ROOT="ddim_cifar10_8_9"
 
 # Single-GPU settings (used when DISTRIBUTED=false)
-GPU_ID=5
+GPU_ID=2
 
 # Multi-GPU (DDP) toggle and settings
 DISTRIBUTED=${DISTRIBUTED:-false}

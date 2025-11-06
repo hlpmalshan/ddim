@@ -9,13 +9,13 @@ reg_values=(0.0 0.3)
 # EXACT checkpoint steps to process per run.
 # e.g., CKPT_STEPS=(120000 200000); leave empty () to auto-discover all.
 # CKPT_STEPS=( 508300 482885 457470 432055 406640 381225 355810 330395 304980 279565 254150 228735 203320 177905 152490 127075 101660 76245 50830 25415 )
-CKPT_STEPS=(609960 711620)
+CKPT_STEPS=( 152490 )
 
 # Base config (relative to configs/)
 BASE_CONFIG="cifar10.yml"
 
 # Experiment roots
-EXP_ROOT="ddim_cifar10"          # where logs/ and image_samples/ live
+EXP_ROOT="ddim_cifar10_8_9"          # where logs/ and image_samples/ live
 DATA_ROOT="ddim_cifar10"         # where datasets live
 
 # Real images dir for FID/PRDC (adjust to your dataset layout)
@@ -33,10 +33,10 @@ TIMESTEPS=${TIMESTEPS:-1000}
 ETA=${ETA:-1}
 
 # Single-GPU / DDP
-GPU_ID=${GPU_ID:-1}
-DISTRIBUTED=${DISTRIBUTED:-false}
-GPUS=${GPUS:-}
-NPROC_PER_NODE=${NPROC_PER_NODE:-0}
+# GPU_ID=${GPU_ID:-1}
+DISTRIBUTED=${DISTRIBUTED:-true}
+GPUS=${GPUS:-0,1}
+NPROC_PER_NODE=${NPROC_PER_NODE:-2}
 MASTER_PORT=${MASTER_PORT:-29501}
 DIST_BACKEND=${DIST_BACKEND:-nccl}
 
@@ -170,7 +170,7 @@ for step in "${STEPS[@]}"; do
     EVAL_TXT="$REG_LOG_DIR/eval_ckpt_${step}.txt"
     python "$EVAL_SCRIPT" \
       --image_size "$IMAGE_SIZE" \
-      --classes "5,9" \
+      --classes "8,9" \
       --real_dir "$REAL_DIR" \
       --gen_dir  "$GEN_DIR" | tee "$EVAL_TXT"
 

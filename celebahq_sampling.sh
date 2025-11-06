@@ -11,7 +11,7 @@ BASE_CONFIG="celebahq.yml"   # under configs/
 # Match your path pattern:
 EXP_ROOT="ddim_celebahq"
 DATA_ROOT="$EXP_ROOT"
-REAL_DIR="$DATA_ROOT/datasets/celebahq/celebahq256/celebahq256_imgs"
+REAL_DIR="$DATA_ROOT/datasets/celebahq/celebahq256/celebahq256_imgs/train"
 
 LOGS_DIR="$EXP_ROOT/logs"
 GEN_BASE="$EXP_ROOT/image_samples"
