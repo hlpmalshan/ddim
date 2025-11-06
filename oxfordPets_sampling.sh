@@ -150,7 +150,7 @@ for step in "${STEPS[@]}"; do
     fi
 
     echo "--- Sampling & Evaluating: reg=$reg, step=$step ---"
-    IDIR="ox_pet_iso_${reg}_s${step}"
+    IDIR="ox_pet_iso_${reg}_s${step}_run2"
     GEN_DIR="$REG_GEN_DIR/$IDIR"
 
     TMP_CFG_NAME="_tmp_ox_pet_ckpt_${step}.yml"
@@ -170,7 +170,7 @@ for step in "${STEPS[@]}"; do
     EVAL_TXT="$REG_LOG_DIR/eval_ckpt_${step}.txt"
     python "$EVAL_SCRIPT" \
       --image_size "$IMAGE_SIZE" \
-      --real_dir "$REAL_PROCCED_DIR" \
+      --real_dir "$REAL_DIR" \
       --gen_dir  "$GEN_DIR" | tee "$EVAL_TXT"
 
     CSV_OUT="$REG_LOG_DIR/eval_summary.csv"
