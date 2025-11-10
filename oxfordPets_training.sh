@@ -60,19 +60,19 @@ run_main() {
 
 for reg in "${reg_values[@]}"; do
   echo "=== reg=$reg ==="
-  DOC="ddim_iso_${reg}_run2"
+  DOC="ddim_iso_${reg}"
   REG_LOG_DIR="$LOGS_DIR/$DOC"
 
   echo "[Train] OXFOR_PET, reg=$reg"
   # If no checkpoints yet, run training; otherwise skip
-  # if ! compgen -G "$REG_LOG_DIR/ckpt_*.pth" > /dev/null; then
-  if [ "$RESUME"=true ] ||  ! compgen -G "$REG_LOG_DIR/ckpt_*.pth" > /dev/null; then
+  if ! compgen -G "$REG_LOG_DIR/ckpt_*.pth" > /dev/null; then
+  # if [ "$RESUME"=true ] ||  ! compgen -G "$REG_LOG_DIR/ckpt_*.pth" > /dev/null; then
     run_main \
       --config "$BASE_CONFIG" \
       --exp "$EXP_ROOT" \
       --doc "$DOC" \
       --reg "$reg" \
-      --resume_training \
+      # --resume_training \
       --timesteps "$TIMESTEPS" --eta "$ETA" --ni
   else
     echo "Checkpoints already present in $REG_LOG_DIR — skipping training."

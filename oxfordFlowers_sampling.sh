@@ -170,7 +170,7 @@ for step in "${STEPS[@]}"; do
     EVAL_TXT="$REG_LOG_DIR/eval_ckpt_${step}.txt"
     python "$EVAL_SCRIPT" \
       --image_size "$IMAGE_SIZE" \
-      --real_dir "$REAL_PROCCED_DIR" \
+      --real_dir "$REAL_DIR" \
       --gen_dir  "$GEN_DIR" | tee "$EVAL_TXT"
 
     CSV_OUT="$REG_LOG_DIR/eval_summary.csv"
