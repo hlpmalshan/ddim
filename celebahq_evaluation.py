@@ -67,22 +67,24 @@ def main(args):
     print(f"[Subset] Using {n} images per set at target {args.resolution}×{args.resolution}.")
 
     # --- FID (torch-fidelity) ---
-    real_tmp = ensure_size_tmp(real_files, args.resolution)
-    gen_tmp  = ensure_size_tmp(gen_files,  args.resolution)
-    try:
-        metrics = torch_fidelity.calculate_metrics(
-            input1=gen_tmp, input2=real_tmp,
-            cuda=torch.cuda.is_available() and (not args.cpu),
-            fid=True, verbose=False, samples_find_deep=False
-        )
-        fid_score = metrics["frechet_inception_distance"]
-        print("\n==== CelebA-HQ EVAL ====")
-        print(f"Resolution: {args.resolution}×{args.resolution}")
-        print(f"Images per set: {n}")
-        print(f"FID: {fid_score:.4f}")
-    finally:
-        shutil.rmtree(real_tmp, ignore_errors=True)
-        shutil.rmtree(gen_tmp,  ignore_errors=True)
+    # real_tmp = ensure_size_tmp(real_files, args.resolution)
+    # gen_tmp  = ensure_size_tmp(gen_files,  args.resolution)
+    # try:
+    #     metrics = torch_fidelity.calculate_metrics(
+    #         input1=gen_tmp, input2=real_tmp,
+    #         cuda=torch.cuda.is_available() and (not args.cpu),
+    #         fid=True, isc=True, verbose=False, samples_find_deep=False
+    #     )
+    #     fid_score = metrics["frechet_inception_distance"]
+    #     is_mean = metrics["inception_score_mean"]
+    #     print("\n==== CelebA-HQ EVAL ====")
+    #     print(f"Resolution: {args.resolution}×{args.resolution}")
+    #     print(f"Images per set: {n}")
+    #     print(f"FID: {fid_score:.4f}")
+    #     print(f"IS: {is_mean:.4f}")
+    # finally:
+    #     shutil.rmtree(real_tmp, ignore_errors=True)
+    #     shutil.rmtree(gen_tmp,  ignore_errors=True)
 
     # --- PRDC (pixel-space vectors, same resize/crop pipeline) ---
     dl_kw = dict(batch_size=args.batch_size, shuffle=False,
@@ -108,7 +110,7 @@ if __name__ == "__main__":
     p.add_argument("--max_images", type=int, default=27000, help="Max images per set.")
     p.add_argument("--batch_size", type=int, default=8)
     p.add_argument("--workers", type=int, default=8)
-    p.add_argument("--nearest_k", type=int, default=5)
+    p.add_argument("--nearest_k", type=int, default=3)
     p.add_argument("--seed", type=int, default=123)
     p.add_argument("--cpu", action="store_true", help="Force CPU for FID.")
     args = p.parse_args()

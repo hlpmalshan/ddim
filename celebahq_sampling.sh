@@ -3,7 +3,7 @@ set -euo pipefail
 shopt -s nullglob
 
 # ---------- Config ----------
-reg_values=(0.3)
+reg_values=(0.0)
 CKPT_STEPS=(500000)  # leave empty () to auto-discover
 
 BASE_CONFIG="celebahq.yml"   # under configs/
@@ -23,9 +23,9 @@ ETA=${ETA:-1}
 
 # DDP / single-GPU
 GPU_ID=${GPU_ID:-0}
-DISTRIBUTED=${DISTRIBUTED:-false}
-GPUS=${GPUS:-}
-NPROC_PER_NODE=${NPROC_PER_NODE:-0}
+DISTRIBUTED=${DISTRIBUTED:-true}
+GPUS=${GPUS:-0,1,2,3,4,5,6,7}
+NPROC_PER_NODE=${NPROC_PER_NODE:-8}
 MASTER_PORT=${MASTER_PORT:-29501}
 DIST_BACKEND=${DIST_BACKEND:-nccl}
 
