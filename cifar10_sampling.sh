@@ -4,12 +4,12 @@ shopt -s nullglob
 
 # -------- Config --------
 # Regularization values to sweep (must match your training runs)
-reg_values=(0.0 0.3)
+reg_values=(0.2)
 
 # EXACT checkpoint steps to process per run.
 # e.g., CKPT_STEPS=(120000 200000); leave empty () to auto-discover all.
 # CKPT_STEPS=( 508300 482885 457470 432055 406640 381225 355810 330395 304980 279565 254150 228735 203320 177905 152490 127075 101660 76245 50830 25415 )
-CKPT_STEPS=(609960 711620)
+CKPT_STEPS=(711620)
 
 # Base config (relative to configs/)
 BASE_CONFIG="cifar10.yml"
@@ -33,12 +33,12 @@ TIMESTEPS=${TIMESTEPS:-1000}
 ETA=${ETA:-1}
 
 # Single-GPU / DDP
-GPU_ID=${GPU_ID:-1}
+GPU_ID=${GPU_ID:-2}
 DISTRIBUTED=${DISTRIBUTED:-false}
 GPUS=${GPUS:-}
 NPROC_PER_NODE=${NPROC_PER_NODE:-0}
 MASTER_PORT=${MASTER_PORT:-29501}
-DIST_BACKEND=${DIST_BACKEND:-nccl}
+DIST_BACKEND=${DIST_BACKEND:-nccl}d
 
 # -------- Helpers --------
 run_main() {
@@ -84,7 +84,7 @@ make_cfg_with_ckpt() {
 
 discover_steps_for_reg() {
   local reg="$1"
-  local dir="$LOGS_DIR/ddim_iso_${reg}"
+  local dir="$LOGS_DIR/ddim_iso_${reg}" # changed
   ls -1 "$dir"/ckpt_*.pth 2>/dev/null \
     | sed -E 's@.*/ckpt_([0-9]+)\.pth@\1@' \
     | sort -V || true
@@ -92,7 +92,7 @@ discover_steps_for_reg() {
 
 ckpt_path_for() {
   local reg="$1" step="$2"
-  echo "$LOGS_DIR/ddim_iso_${reg}/ckpt_${step}.pth"
+  echo "$LOGS_DIR/ddim_iso_${reg}/ckpt_${step}.pth" #changed
 }
 
 # parse_eval_to_csv_row() {
@@ -139,7 +139,7 @@ fi
 for step in "${STEPS[@]}"; do
   echo "=== STEP $step ==="
   for reg in "${reg_values[@]}"; do
-    DOC="ddim_iso_${reg}"
+    DOC="ddim_iso_${reg}"  #chnaged
     REG_LOG_DIR="$LOGS_DIR/$DOC"
     REG_GEN_DIR="$GEN_BASE"
 
@@ -150,7 +150,7 @@ for step in "${STEPS[@]}"; do
     fi
 
     echo "--- Sampling & Evaluating: reg=$reg, step=$step ---"
-    IDIR="cifar10_iso_${reg}_s${step}"
+    IDIR="cifar10_iso_${reg}_s${step}" #chnaged
     GEN_DIR="$REG_GEN_DIR/$IDIR"
 
     TMP_CFG_NAME="_tmp_cifar10_ckpt_${step}.yml"

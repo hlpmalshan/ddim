@@ -9,16 +9,16 @@ shopt -s nullglob
 
 # -------- Configurable knobs --------
 # Regularization values to sweep
-reg_values=(0.0 0.3)
+reg_values=(0.01)
 
 # Base config to use for training (relative to configs/)
 BASE_CONFIG="cifar10.yml"
 
 # Experiment root (where logs/ and datasets/ live)
-EXP_ROOT="ddim_cifar10_8_9"
+EXP_ROOT="ddim_cifar10"
 
 # Single-GPU settings (used when DISTRIBUTED=false)
-GPU_ID=2
+GPU_ID=7
 
 # Multi-GPU (DDP) toggle and settings
 DISTRIBUTED=${DISTRIBUTED:-false}
@@ -30,7 +30,7 @@ DIST_BACKEND=${DIST_BACKEND:-nccl}
 # Training params
 TIMESTEPS=${TIMESTEPS:-1000}
 ETA=${ETA:-1}
-RESUME=${RESUME:-false}
+RESUME=${RESUME:-true}
 
 # Derived dirs
 LOGS_DIR="$EXP_ROOT/logs"
@@ -66,26 +66,53 @@ for reg in "${reg_values[@]}"; do
   echo "=== reg=$reg ==="
   DOC="ddim_iso_${reg}"
   REG_LOG_DIR="$LOGS_DIR/$DOC"
+  mkdir -p "$REG_LOG_DIR"
 
+  # echo "[Train] CIFAR10, reg=$reg"
+  # # If no checkpoints yet, run training; otherwise skip
+  # if [ "$RESUME"=true ] ||  ! compgen -G "$REG_LOG_DIR/ckpt_*.pth" > /dev/null; then
+  #   run_main \
+  #     --config "$BASE_CONFIG" \
+  #     --exp "$EXP_ROOT" \
+  #     --doc "$DOC" \
+  #     --reg "$reg" \
+  #     --resume_training \
+  #     --timesteps "$TIMESTEPS" --eta "$ETA" --ni
+  # else
+  #     run_main \
+  #     --config "$BASE_CONFIG" \
+  #     --exp "$EXP_ROOT" \
+  #     --doc "$DOC" \
+  #     --reg "$reg" \
+  #     --timesteps "$TIMESTEPS" --eta "$ETA" --ni
+  #   echo "Checkpoints already present in $REG_LOG_DIR and RESUME=false — skipping training."
+  # fi
   echo "[Train] CIFAR10, reg=$reg"
-  # If no checkpoints yet, run training; otherwise skip
-  if [ "$RESUME"=true ] ||  ! compgen -G "$REG_LOG_DIR/ckpt_*.pth" > /dev/null; then
+
+  CKPT="$REG_LOG_DIR/ckpt.pth"
+  have_ckpt=false
+  if [ -f "$CKPT" ]; then
+    have_ckpt=true
+  fi
+
+  resume_arg=()
+  if [ "$RESUME" = true ] && [ "$have_ckpt" = true ]; then
+    resume_arg=(--resume_training)
+  fi
+
+  # Train if RESUME=true (and ckpt exists) OR no checkpoint yet
+  if [ "$RESUME" = true ] || [ "$have_ckpt" = false ]; then
     run_main \
       --config "$BASE_CONFIG" \
       --exp "$EXP_ROOT" \
       --doc "$DOC" \
       --reg "$reg" \
-      --resume_training \
+      "${resume_arg[@]}" \
       --timesteps "$TIMESTEPS" --eta "$ETA" --ni
   else
-      run_main \
-      --config "$BASE_CONFIG" \
-      --exp "$EXP_ROOT" \
-      --doc "$DOC" \
-      --reg "$reg" \
-      --timesteps "$TIMESTEPS" --eta "$ETA" --ni
-    echo "Checkpoints already present in $REG_LOG_DIR and RESUME=false — skipping training."
+    echo "Checkpoint exists ($CKPT) and RESUME=false — skipping."
   fi
+
 done
 
 echo "CIFAR10 training completed."
