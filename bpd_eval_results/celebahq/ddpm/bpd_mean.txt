@@ -1,0 +1,2 @@
+num_samples=27000
+bpd_mean=2.569033
