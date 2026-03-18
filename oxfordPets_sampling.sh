@@ -9,14 +9,14 @@ reg_values=(0.0 0.3)
 # EXACT checkpoint steps to process per run.
 # e.g., CKPT_STEPS=(120000 200000); leave empty () to auto-discover all.
 # CKPT_STEPS=( 508300 482885 457470 432055 406640 381225 355810 330395 304980 279565 254150 228735 203320 177905 152490 127075 101660 76245 50830 25415 )
-CKPT_STEPS=( 125350 )
+CKPT_STEPS=( 230000 )
 
 # Base config (relative to configs/)
-BASE_CONFIG="oxfordIIITpet.yml"
+BASE_CONFIG="OxfordPet.yml"
 
 # Experiment roots
-EXP_ROOT="ddim_ox_pet"          # where logs/ and image_samples/ live
-DATA_ROOT="ddim_ox_pet"         # where datasets live
+EXP_ROOT="ddim_ox_pet_3"          # where logs/ and image_samples/ live
+DATA_ROOT="ddim_ox_pet_3"         # where datasets live
 
 # Real images dir for FID/PRDC (adjust to your dataset layout)
 REAL_DIR="$DATA_ROOT/datasets/oxford_pets/oxford-iiit-pet/images"
@@ -33,10 +33,10 @@ TIMESTEPS=${TIMESTEPS:-1000}
 ETA=${ETA:-1}
 
 # Single-GPU / DDP
-GPU_ID=${GPU_ID:-0}
-DISTRIBUTED=${DISTRIBUTED:-false}
-GPUS=${GPUS:-}
-NPROC_PER_NODE=${NPROC_PER_NODE:-0}
+GPU_ID=${GPU_ID:-7}
+DISTRIBUTED=${DISTRIBUTED:-true}
+GPUS=${GPUS:-0,1,2,3,4}
+NPROC_PER_NODE=${NPROC_PER_NODE:-5}
 MASTER_PORT=${MASTER_PORT:-29501}
 DIST_BACKEND=${DIST_BACKEND:-nccl}
 
@@ -150,15 +150,15 @@ for step in "${STEPS[@]}"; do
     fi
 
     echo "--- Sampling & Evaluating: reg=$reg, step=$step ---"
-    IDIR="ox_pet_iso_${reg}_s${step}_run2"
+    IDIR="ox_pet_iso_${reg}_s${step}"
     GEN_DIR="$REG_GEN_DIR/$IDIR"
 
-    TMP_CFG_NAME="_tmp_ox_pet_ckpt_${step}.yml"
-    make_cfg_with_ckpt "$step" "$BASE_CONFIG" "$TMP_CFG_NAME"
+    # TMP_CFG_NAME="_tmp_ox_pet_ckpt_${step}.yml"
+    # make_cfg_with_ckpt "$step" "$BASE_CONFIG" "$TMP_CFG_NAME"
 
     # Sampling (assumes Python creates needed dirs)
     run_main \
-      --config "$TMP_CFG_NAME" \
+      --config "$BASE_CONFIG" \
       --exp "$EXP_ROOT" \
       --doc "$DOC" \
       --reg "$reg" \

@@ -6,16 +6,16 @@ shopt -s nullglob
 
 # -------- Configurable knobs --------
 # Regularization values to sweep
-reg_values=(0.0 0.3)
+reg_values=(0.3)
 
 # Base config to use for training (relative to configs/)
-BASE_CONFIG="oxfordIIITpet.yml"
+BASE_CONFIG="OxfordPet.yml"
 
 # Experiment root (where logs/ and datasets/ live)
-EXP_ROOT="ddim_ox_pet"
+EXP_ROOT="ddim_ox_pet_3"
 
 # Single-GPU settings (used when DISTRIBUTED=false)
-GPU_ID=1
+GPU_ID=2
 
 # Multi-GPU (DDP) toggle and settings
 DISTRIBUTED=${DISTRIBUTED:-false}
@@ -72,7 +72,6 @@ for reg in "${reg_values[@]}"; do
       --exp "$EXP_ROOT" \
       --doc "$DOC" \
       --reg "$reg" \
-      # --resume_training \
       --timesteps "$TIMESTEPS" --eta "$ETA" --ni
   else
     echo "Checkpoints already present in $REG_LOG_DIR — skipping training."
