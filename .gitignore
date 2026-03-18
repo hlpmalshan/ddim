@@ -18,3 +18,4 @@ PCA_Plots
 Transient_Results/**/t_*
 transient other/**/t_*
 ddim_cifar10_8_9
+ddim_pneumonia
