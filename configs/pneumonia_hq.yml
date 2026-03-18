@@ -1,19 +1,19 @@
 data:
-    dataset: "CELEBA_HQ"
-    dataset_path: "ddim_celebahq/datasets/celebahq256/celebahq256_imgs"
+    dataset: "PNEUMONIA"
+    dataset_path: "ddim_pneumonia/datasets/Pneumonia_dataset/chest_xray_preprocessed/train/NORMAL_SUBSET"
     image_size: 256
-    channels: 3
+    channels: 1
     logit_transform: false
     uniform_dequantization: false
     gaussian_dequantization: false
-    random_flip: true
+    random_flip: false
     rescaled: true
-    num_workers: 15
+    num_workers: 8
 
 model:
     type: "iso"
-    in_channels: 3
-    out_ch: 3
+    in_channels: 1
+    out_ch: 1
     ch: 128
     ch_mult: [1, 1, 2, 2, 4, 4]
     num_res_blocks: 2
@@ -23,7 +23,7 @@ model:
     ema_rate: 0.999
     ema: True
     resamp_with_conv: True
-    save_statistics: True
+    save_statistics: False
 
 diffusion:
     beta_schedule: linear
@@ -32,16 +32,16 @@ diffusion:
     num_diffusion_timesteps: 1000
 
 training:
-    batch_size: 8
-    n_epochs: 1200
-    n_iters: 5000000
-    snapshot_freq: 50000
-    validation_freq: 2000
+    batch_size: 5 # x * Num of GPUs
+    n_epochs: 1000
+    n_iters: 11000
+    snapshot_freq: 10000
+    # validation_freq: 2000
 
 sampling:
-    batch_size: 128
+    batch_size: 10
     last_only: True
-    n_samples: 31865
+    n_samples: 500
 
 optim:
     weight_decay: 0.000

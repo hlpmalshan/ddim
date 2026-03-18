@@ -39,9 +39,10 @@ training:
     # validation_freq: 2000
 
 sampling:
-    batch_size: 64
+    batch_size: 512
     last_only: True
     n_samples: 50000
+    ckpt_id: 406640
 
 optim:
     weight_decay: 0.000

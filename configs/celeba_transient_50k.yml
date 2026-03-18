@@ -1,54 +1,53 @@
 data:
-    dataset: "CIFAR10"
-    image_size: 32
+    dataset: "CELEBA"
+    dataset_path: "ddim_celeba/datasets/celeba/celeba/prepocessed_imgs"
+    image_size: 64
     channels: 3
     logit_transform: false
-    uniform_dequantization: true
+    uniform_dequantization: false
     gaussian_dequantization: false
     random_flip: true
     rescaled: true
     num_workers: 4
-    selected_classes: [5, 8] # [5, 8], [8, 9]
-    num_classes: 2
 
 model:
     type: "iso"
     in_channels: 3
     out_ch: 3
     ch: 128
-    ch_mult: [1, 2, 2, 2]
-    num_res_blocks: 3
-    attn_resolutions: [16, 8]
+    ch_mult: [1, 2, 2, 2, 4]
+    num_res_blocks: 2
+    attn_resolutions: [16, ]
     dropout: 0.1
     var_type: fixedlarge
     ema_rate: 0.9999
     ema: True
     resamp_with_conv: True
-    save_statistics: False       # if True: save batch mean and standard deviation in .csv 
-    snr_gamma: 5.0
+    save_statistics: True
 
 diffusion:
-    beta_schedule: linear #linear
+    beta_schedule: linear
     beta_start: 0.0001
     beta_end: 0.02
     num_diffusion_timesteps: 1000
 
 training:
-    batch_size: 256
-    n_epochs: 20000
-    n_iters: 508300
-    snapshot_freq: 25415
-    # validation_freq: 2000
+    batch_size: 128
+    n_epochs: 3907
+    n_iters: 500000
+    snapshot_freq: 50000
+    # validation_freq: 20000
 
 sampling:
-    batch_size: 256
+    batch_size: 1024
     last_only: True
-    n_samples: 10000
+    n_samples: 50000
+    ckpt_id: 500000
 
 optim:
     weight_decay: 0.000
     optimizer: "Adam"
-    lr: 0.0001
+    lr: 0.0002
     beta1: 0.9
     amsgrad: false
     eps: 0.00000001

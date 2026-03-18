@@ -35,12 +35,13 @@ diffusion:
 
 training:
     batch_size: 256
-    n_epochs: 20000
+    n_epochs: 13000
     n_iters: 508300
     snapshot_freq: 25415
     # validation_freq: 2000
 
 sampling:
+    ckpt_id: 279565
     batch_size: 256
     last_only: True
     n_samples: 10000

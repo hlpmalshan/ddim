@@ -1,5 +1,5 @@
-iata:
-    dataset: "OXFORD_IIIT_PET"  # Dataset name
+data:
+    dataset: "OXFORD_FLOWERS"   # Dataset name
     image_size: 64              # Image size for resizing
     channels: 3                 # Number of image channels (RGB)
     logit_transform: false      # Apply logit transform
@@ -16,9 +16,9 @@ model:
     ch: 64                      # Base channel size
     ch_mult: [1, 2, 4, 8]       # Channel multiplier for each layer
     num_res_blocks: 2           # Number of residual blocks
-    attn_resolutions: [16, 8] # Resolutions with attention
-    dropout: 0.0                # Dropout rate
-    var_type: fixedsmall        # Variance type
+    attn_resolutions: []   # Resolutions with attention
+    dropout: 0.1                # Dropout rateqd
+    var_type: fixedlarge        # Variance type
     ema_rate: 0.999             # EMA decay rate
     ema: True                   # Enable Exponential Moving Average
     resamp_with_conv: True      # Use convolutional resampling
@@ -31,21 +31,22 @@ diffusion:
     num_diffusion_timesteps: 1000  # Number of diffusion timesteps
 
 training:
-    batch_size: 32            # Training batch size
-    n_epochs: 1090              # Number of training epochs
-    n_iters: 501400            # Total training iterations
-    snapshot_freq: 25070           # Snapshot frequency
+    batch_size: 4             # Training batch size
+    n_epochs: 3200              # Number of training epochs
+    n_iters: 816000            # Total training iterations
+    snapshot_freq: 20400          # Snapshot frequency
     #validation_freq: 2000       # Validation frequency
 
 sampling:
-    batch_size: 32             # Sampling batch size
+    batch_size: 1024              # Sampling batch size
     last_only: True             # Only return the last timestep samples
-    n_samples: 7500
+    n_samples: 50000
+    ckpt_id: 816000
 
 optim:
-    weight_decay: 0.000         # Weight decay for optimizer
+    weight_decay: 0.0000        # Weight decay for optimizer
     optimizer: "Adam"           # Optimizer type
-    lr: 0.0002                  # Learning rate
+    lr: 0.00005                  # Learning rate
     beta1: 0.9                  # Beta1 for Adam
     amsgrad: false              # Use AMSGrad variant
     eps: 1.0e-8                   # Epsilon for numerical stability

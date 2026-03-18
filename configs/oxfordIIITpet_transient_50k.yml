@@ -1,4 +1,4 @@
-iata:
+data:
     dataset: "OXFORD_IIIT_PET"  # Dataset name
     image_size: 64              # Image size for resizing
     channels: 3                 # Number of image channels (RGB)
@@ -16,13 +16,13 @@ model:
     ch: 64                      # Base channel size
     ch_mult: [1, 2, 4, 8]       # Channel multiplier for each layer
     num_res_blocks: 2           # Number of residual blocks
-    attn_resolutions: [16, 8] # Resolutions with attention
-    dropout: 0.0                # Dropout rate
-    var_type: fixedsmall        # Variance type
+    attn_resolutions: []        # Resolutions with attention
+    dropout: 0.1                # Dropout rate
+    var_type: fixedlarge        # Variance type
     ema_rate: 0.999             # EMA decay rate
     ema: True                   # Enable Exponential Moving Average
     resamp_with_conv: True      # Use convolutional resampling
-    save_statistics: True       # if True: save batch mean and standard deviation in .csv 
+    save_statistics: True       # if True: save batch mean and standard deviation in .csv
 
 diffusion:
     beta_schedule: linear       # Beta schedule for diffusion
@@ -31,22 +31,23 @@ diffusion:
     num_diffusion_timesteps: 1000  # Number of diffusion timesteps
 
 training:
-    batch_size: 32            # Training batch size
+    batch_size: 8               # Training batch size
     n_epochs: 1090              # Number of training epochs
-    n_iters: 501400            # Total training iterations
-    snapshot_freq: 25070           # Snapshot frequency
-    #validation_freq: 2000       # Validation frequency
+    n_iters: 501400             # Total training iterations
+    snapshot_freq: 25070        # Snapshot frequency
+    #validation_freq: 2000      # Validation frequency
 
 sampling:
-    batch_size: 32             # Sampling batch size
-    last_only: True             # Only return the last timestep samples
-    n_samples: 7500
+    batch_size: 1024
+    last_only: True
+    n_samples: 50000
+    ckpt_id: 125350
 
 optim:
     weight_decay: 0.000         # Weight decay for optimizer
     optimizer: "Adam"           # Optimizer type
-    lr: 0.0002                  # Learning rate
+    lr: 0.00005                 # Learning rate
     beta1: 0.9                  # Beta1 for Adam
     amsgrad: false              # Use AMSGrad variant
-    eps: 1.0e-8                   # Epsilon for numerical stability
+    eps: 1.0e-8                 # Epsilon for numerical stability
     grad_clip: 1.0              # Gradient clipping value
