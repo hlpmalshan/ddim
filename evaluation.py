@@ -35,7 +35,7 @@ def clean_image_dir(img_dir):
             os.remove(f)
 
 # -------- Prepare resized copy with torchvision transforms (resize shorter side + center crop) --------
-def prepare_resized_copy(src_dir, size=64):
+def prepare_resized_copy(src_dir, size=32):
     tmp_dir = tempfile.mkdtemp()
     transform = transforms.Compose([
         transforms.Resize(size),          # shorter side resized to 299
@@ -76,7 +76,7 @@ def extract_rgb_features(dataloader):
     return np.concatenate(imgs_list, axis=0)
 
 # -------- Main --------
-def main(real_dir, gen_dir, batch_size=32, device='cuda:1' if torch.cuda.is_available() else 'cpu', image_size=64):
+def main(real_dir, gen_dir, batch_size=32, device='cuda:1' if torch.cuda.is_available() else 'cpu', image_size=32):
     print("[Cleaning image directories]")
     clean_image_dir(real_dir)
     clean_image_dir(gen_dir)
@@ -109,6 +109,10 @@ def main(real_dir, gen_dir, batch_size=32, device='cuda:1' if torch.cuda.is_avai
     fid_score = metrics['frechet_inception_distance']
     is_mean = metrics['inception_score_mean']
     is_std = metrics['inception_score_std']
+    
+    print("\n==== Final Metrics ====")
+    print(f"FID: {fid_score:.4f}")
+    print(f"Inception Score: {is_mean:.4f} ± {is_std:.4f}")
 
     shutil.rmtree(real_tmp)
     shutil.rmtree(gen_tmp)
@@ -143,6 +147,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Calculate FID, IS, PRDC metrics on image directories")
     parser.add_argument("--real_dir", type=str, help="Directory with real images")
     parser.add_argument("--gen_dir", type=str, help="Directory with generated images")
-    parser.add_argument("--image_size", type=int, default=64, help="Image resolution (eg. 32 or 64)")
+    parser.add_argument("--image_size", type=int, default=32, help="Image resolution (eg. 32 or 64)")
     args = parser.parse_args()
     main(args.real_dir, args.gen_dir, args.image_size)
