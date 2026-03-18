@@ -3,6 +3,8 @@ import torch
 import numbers
 import torchvision.transforms as transforms
 import torchvision.transforms.functional as F
+import torchvision
+from PIL import Image
 from torchvision.datasets import MNIST
 from torchvision.datasets import CIFAR10
 from torchvision.datasets import CIFAR100
@@ -365,10 +367,85 @@ def get_dataset(args, config):
             split=test_split,
             transform=test_transform,
         )
+
+    elif config.data.dataset in ("PNEUMONIA", "PNEUMONIA_FOLDER"):
+        dataset_path = getattr(config.data, "dataset_path", None)
+        if dataset_path is None:
+            raise ValueError("config.data.dataset_path is required for PNEUMONIA")
+
+        dataset_path = os.path.abspath(dataset_path)
+        # Support:
+        # - dataset_path/train/NORMAL (use dataset_path/train)
+        # - dataset_path/NORMAL (use dataset_path)
+        # - dataset_path == .../train/NORMAL (use parent of NORMAL)
+        train_root = os.path.join(dataset_path)
+        
+        test_root = os.path.join(dataset_path, "test")
+
+        if config.data.random_flip:
+            base_transform = transforms.Compose(
+                [
+                    transforms.Grayscale(num_output_channels=config.data.channels),
+                    transforms.Resize(config.data.image_size),
+                    transforms.RandomHorizontalFlip(p=0.5),
+                    transforms.ToTensor(),
+                ]
+            )
+            test_transform = transforms.Compose(
+                [
+                    transforms.Grayscale(num_output_channels=config.data.channels),
+                    transforms.Resize(config.data.image_size),
+                    transforms.ToTensor(),
+                ]
+            )
+        else:
+            base_transform = test_transform = transforms.Compose(
+                [
+                    transforms.Grayscale(num_output_channels=config.data.channels),
+                    transforms.Resize(config.data.image_size),
+                    transforms.ToTensor(),
+                ]
+            )
+
+        class SingleFolderDataset(torch.utils.data.Dataset):
+            def __init__(self, root, transform=None):
+                self.root = root
+                self.transform = transform
+                self.paths = []
+                for dirpath, _, filenames in os.walk(root):
+                    for fname in filenames:
+                        if fname.lower().endswith((".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff")):
+                            self.paths.append(os.path.join(dirpath, fname))
+                self.paths.sort()
+                if not self.paths:
+                    raise RuntimeError(f"No images found in {root}")
+
+            def __len__(self):
+                return len(self.paths)
+
+            def __getitem__(self, idx):
+                path = self.paths[idx]
+                img = Image.open(path).convert("L" if config.data.channels == 1 else "RGB")
+                if self.transform is not None:
+                    img = self.transform(img)
+                return img, 0
+
+        if not os.path.isdir(train_root):
+            raise FileNotFoundError(f"Training root not found: {train_root}")
+
+        # If the dataset_path points directly at NORMAL, use only that folder.
+        if os.path.basename(dataset_path).upper() == "NORMAL":
+            dataset = SingleFolderDataset(dataset_path, transform=base_transform)
+            test_dataset = dataset
+        else:
+            dataset = torchvision.datasets.ImageFolder(train_root, transform=base_transform)
+            if os.path.isdir(test_root):
+                test_dataset = torchvision.datasets.ImageFolder(test_root, transform=test_transform)
+            else:
+                test_dataset = dataset
     
     else:
         dataset, test_dataset = None, None
-
     return dataset, test_dataset
 
 

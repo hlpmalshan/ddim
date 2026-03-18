@@ -57,6 +57,19 @@ def get_beta_schedule(beta_schedule, *, beta_start, beta_end, num_diffusion_time
     elif beta_schedule == "sigmoid":
         betas = np.linspace(-6, 6, num_diffusion_timesteps)
         betas = sigmoid(betas) * (beta_end - beta_start) + beta_start
+        
+    elif beta_schedule == "cosine":
+        s = 0.008
+        steps = num_diffusion_timesteps
+        t = np.linspace(0, steps, steps + 1, dtype=np.float64) / steps
+
+        alphas_cumprod = np.cos(
+            ((t + s) / (1 + s)) * np.pi * 0.5
+        ) ** 2
+        alphas_cumprod = alphas_cumprod / alphas_cumprod[0]
+
+        betas = 1 - (alphas_cumprod[1:] / alphas_cumprod[:-1])
+        betas = np.clip(betas, 1e-8, 0.999)
     else:
         raise NotImplementedError(beta_schedule)
     assert betas.shape == (num_diffusion_timesteps,)
@@ -178,7 +191,7 @@ class Diffusion(object):
         batch_norm_mean_list = np.zeros(config.training.n_iters, dtype=float)
         batch_norm_standard_deviation_list = np.zeros(config.training.n_iters, dtype=float)
         if self.args.resume_training:
-            ckpt_name = "ckpt_200000.pth" if "celeba" in os.path.basename(self.args.config) else "ckpt.pth"
+            ckpt_name = "ckpt.pth"   #"ckpt_200000.pth" if "celeba" in os.path.basename(self.args.config) else "ckpt.pth"
             states = torch.load(
                 os.path.join(self.args.log_path, ckpt_name),
                 map_location=self.device,
@@ -364,6 +377,7 @@ class Diffusion(object):
 
         if world_size > 1 and dist.is_available() and dist.is_initialized():
             base_existing = len(glob.glob(os.path.join(base_folder, "*.png")))
+            # base_existing = 27000
             existing_tensor = torch.tensor([base_existing], device=self.device, dtype=torch.long)
             dist.broadcast(existing_tensor, src=0)
             global_existing = int(existing_tensor.item())
