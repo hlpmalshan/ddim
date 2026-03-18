@@ -16,6 +16,6 @@ ddim_mnist_dig1
 PCA_Plots
 *.log
 Transient_Results/**/t_*
-transient other/**/t_*
+transient_other/**/t_*
 ddim_cifar10_8_9
 ddim_pneumonia
