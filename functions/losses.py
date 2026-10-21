@@ -1,5 +1,5 @@
 import torch
-
+from functions.trace_energy import per_timestep_energy
 
 def noise_estimation_loss(model,
                           x0: torch.Tensor,
@@ -83,7 +83,43 @@ def noise_estimation_loss_iso(model,
         iso_loss = (1 - output.flatten().square().mean()).square()
         return base_loss + reg * iso_loss, batch_norm_mean, batch_norm_standard_deviation
 
+
+def noise_estimation_loss_iso_per_timestep(model,
+                                          x0: torch.Tensor,
+                                          t: torch.LongTensor,
+                                          e: torch.Tensor,
+                                          b: torch.Tensor,
+                                          keepdim=False, reg=0.0,
+                                          sync_distributed=False,
+                                          return_details=False):
+    """MSE plus mean_t[(mean_{samples,coordinates at t}(eps_hat**2)-1)**2].
+
+    A per-sample keepdim loss has no equivalent semantics for this grouped
+    objective; callers must request the scalar loss instead.
+    """
+
+    if keepdim:
+        raise ValueError("per-timestep regularization requires keepdim=False")
+    a = (1 - b).cumprod(dim=0).index_select(0, t).view(-1, 1, 1, 1)
+    x = x0 * a.sqrt() + e * (1.0 - a).sqrt()
+    output = model(x, t.float())
+    values = output.float() if output.dtype in (torch.float16, torch.bfloat16) else output
+    base_loss = (e - values).square().mean()
+    times, energies, counts = per_timestep_energy(output, t, sync_distributed)
+    energy_loss = (energies - 1.0).square().mean()
+    sample_energy = values.flatten(1).square().mean(dim=1)
+    result = (base_loss + reg * energy_loss,
+              sample_energy.mean(), sample_energy.std(unbiased=False))
+    if return_details:
+        details = {"mse": base_loss.detach(), "energy_loss": energy_loss.detach(),
+                   "timesteps": times.detach(), "energies": energies.detach(),
+                   "counts": counts.detach()}
+        return result + (details,)
+    return result
+
+
 loss_registry = {
         'simple': noise_estimation_loss,
         'iso': noise_estimation_loss_iso,
+        'iso_per_timestep': noise_estimation_loss_iso_per_timestep
         }        
