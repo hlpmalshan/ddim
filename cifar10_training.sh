@@ -1,24 +1,24 @@
-#Run this
-# RESUME=true DISTRIBUTED=true NPROC_PER_NODE=2 GPUS=0,1 bash cifar10_training.sh
-
 #!/bin/bash
 set -euo pipefail
-shopt -s nullglob
 
-# Train CelebA only (no sampling/evaluation)
+# Train CIFAR-10 only (no sampling/evaluation)
+# Example: RESUME=true DISTRIBUTED=true GPUS=0,1 bash cifar10_training.sh
+
+# Resolve main.py and configs relative to this script.
+cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
 
 # -------- Configurable knobs --------
 # Regularization values to sweep
-reg_values=(0.01)
+reg_values=(0.0)
 
 # Base config to use for training (relative to configs/)
-BASE_CONFIG="cifar10.yml"
+BASE_CONFIG=${BASE_CONFIG:-cifar10.yml}
 
 # Experiment root (where logs/ and datasets/ live)
-EXP_ROOT="ddim_cifar10"
+EXP_ROOT=${EXP_ROOT:-ddim_cifar10}
 
 # Single-GPU settings (used when DISTRIBUTED=false)
-GPU_ID=7
+GPU_ID=${GPU_ID:-1}
 
 # Multi-GPU (DDP) toggle and settings
 DISTRIBUTED=${DISTRIBUTED:-false}
@@ -31,6 +31,21 @@ DIST_BACKEND=${DIST_BACKEND:-nccl}
 TIMESTEPS=${TIMESTEPS:-1000}
 ETA=${ETA:-1}
 RESUME=${RESUME:-true}
+
+# Per-timestep regularization mode (only supported for iso model) otherwise select batch mode
+REG_MODE=${REG_MODE:-per_timestep} 
+TIMESTEP_GROUPS=${TIMESTEP_GROUPS:-4}
+
+for flag in DISTRIBUTED RESUME; do
+  if [[ "${!flag}" != true && "${!flag}" != false ]]; then
+    echo "[ERROR] $flag must be true or false." >&2
+    exit 1
+  fi
+done
+if ! [[ "$NPROC_PER_NODE" =~ ^[0-9]+$ ]]; then
+  echo "[ERROR] NPROC_PER_NODE must be a nonnegative integer." >&2
+  exit 1
+fi
 
 # Derived dirs
 LOGS_DIR="$EXP_ROOT/logs"
@@ -56,7 +71,7 @@ run_main() {
     torchrun --standalone \
       --master_port="$MASTER_PORT" \
       --nproc_per_node="$NPROC_PER_NODE" \
-      main.py --distributed "$@"
+      main.py --distributed --dist_backend "$DIST_BACKEND" "$@"
   else
     python main.py "$@" --gpu "$GPU_ID"
   fi
@@ -64,29 +79,13 @@ run_main() {
 
 for reg in "${reg_values[@]}"; do
   echo "=== reg=$reg ==="
-  DOC="ddim_iso_${reg}"
+  # DOC="ddim_iso_${reg}"
+  if [ "$REG_MODE" = "per_timestep" ]; then
+  DOC="ddim_iso_${REG_MODE}_g${TIMESTEP_GROUPS}_${reg}"
+  else
+    DOC="ddim_iso_${reg}"
+  fi
   REG_LOG_DIR="$LOGS_DIR/$DOC"
-  mkdir -p "$REG_LOG_DIR"
-
-  # echo "[Train] CIFAR10, reg=$reg"
-  # # If no checkpoints yet, run training; otherwise skip
-  # if [ "$RESUME"=true ] ||  ! compgen -G "$REG_LOG_DIR/ckpt_*.pth" > /dev/null; then
-  #   run_main \
-  #     --config "$BASE_CONFIG" \
-  #     --exp "$EXP_ROOT" \
-  #     --doc "$DOC" \
-  #     --reg "$reg" \
-  #     --resume_training \
-  #     --timesteps "$TIMESTEPS" --eta "$ETA" --ni
-  # else
-  #     run_main \
-  #     --config "$BASE_CONFIG" \
-  #     --exp "$EXP_ROOT" \
-  #     --doc "$DOC" \
-  #     --reg "$reg" \
-  #     --timesteps "$TIMESTEPS" --eta "$ETA" --ni
-  #   echo "Checkpoints already present in $REG_LOG_DIR and RESUME=false — skipping training."
-  # fi
   echo "[Train] CIFAR10, reg=$reg"
 
   CKPT="$REG_LOG_DIR/ckpt.pth"
@@ -107,6 +106,8 @@ for reg in "${reg_values[@]}"; do
       --exp "$EXP_ROOT" \
       --doc "$DOC" \
       --reg "$reg" \
+      --reg_mode "$REG_MODE" \
+      --timestep_groups "$TIMESTEP_GROUPS" \
       "${resume_arg[@]}" \
       --timesteps "$TIMESTEPS" --eta "$ETA" --ni
   else
@@ -115,4 +116,4 @@ for reg in "${reg_values[@]}"; do
 
 done
 
-echo "CIFAR10 training completed."
+echo "CIFAR10 training script finished."
