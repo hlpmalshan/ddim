@@ -8,8 +8,8 @@ data:
     random_flip: true
     rescaled: true
     num_workers: 4
-    selected_classes: [5, 8] # [5, 8], [8, 9]
-    num_classes: 2
+    selected_classes: null #[5, 8] # [5, 8], [8, 9]
+    num_classes: 10 #2
 
 model:
     type: "iso"
@@ -17,8 +17,8 @@ model:
     out_ch: 3
     ch: 128
     ch_mult: [1, 2, 2, 2]
-    num_res_blocks: 3
-    attn_resolutions: [16, 8]
+    num_res_blocks: 2 #3
+    attn_resolutions: [16] #[16, 8]
     dropout: 0.1
     var_type: fixedlarge
     ema_rate: 0.9999
@@ -34,10 +34,10 @@ diffusion:
     num_diffusion_timesteps: 1000
 
 training:
-    batch_size: 256
-    n_epochs: 20000
-    n_iters: 508300
-    snapshot_freq: 25415
+    batch_size: 128
+    n_epochs:  2047 # 20000
+    n_iters: 800000  #508300
+    snapshot_freq: 20000 #25415
     # validation_freq: 2000
 
 sampling:
@@ -48,7 +48,7 @@ sampling:
 optim:
     weight_decay: 0.000
     optimizer: "Adam"
-    lr: 0.0001
+    lr: 0.0002 #0.0001
     beta1: 0.9
     amsgrad: false
     eps: 0.00000001
