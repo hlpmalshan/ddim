@@ -4,12 +4,13 @@ shopt -s nullglob
 
 # -------- Config --------
 # Regularization values to sweep (must match your training runs)
-reg_values=(0.2)
+reg_values=(0.3)
 
 # EXACT checkpoint steps to process per run.
 # e.g., CKPT_STEPS=(120000 200000); leave empty () to auto-discover all.
 # CKPT_STEPS=( 508300 482885 457470 432055 406640 381225 355810 330395 304980 279565 254150 228735 203320 177905 152490 127075 101660 76245 50830 25415 )
-CKPT_STEPS=(711620)
+# CKPT_STEPS=(711620)
+CKPT_STEPS=(800000)
 
 # Base config (relative to configs/)
 BASE_CONFIG="cifar10.yml"
@@ -21,24 +22,32 @@ DATA_ROOT="ddim_cifar10"         # where datasets live
 # Real images dir for FID/PRDC (adjust to your dataset layout)
 REAL_DIR="$DATA_ROOT/datasets/cifar10/train"
 
+# Fail before sampling when the real-image export is missing.
+if [ ! -d "$REAL_DIR" ]; then
+  echo "[ERROR] Missing real images: $REAL_DIR" >&2
+  echo "Run python cifar10_batch_to_image.py before sampling/evaluation." >&2
+  exit 1
+fi
+
 # Image size
 IMAGE_SIZE=32
 # Output / logs
 LOGS_DIR="$EXP_ROOT/logs"
 GEN_BASE="$EXP_ROOT/image_samples"
 EVAL_SCRIPT="evaluation.py"
+FEATURE_EVAL_SCRIPT="evaluation_feature_space.py"
 
 # Sampling params
 TIMESTEPS=${TIMESTEPS:-1000}
 ETA=${ETA:-1}
 
 # Single-GPU / DDP
-GPU_ID=${GPU_ID:-2}
+GPU_ID=${GPU_ID:-1}
 DISTRIBUTED=${DISTRIBUTED:-false}
 GPUS=${GPUS:-}
 NPROC_PER_NODE=${NPROC_PER_NODE:-0}
 MASTER_PORT=${MASTER_PORT:-29501}
-DIST_BACKEND=${DIST_BACKEND:-nccl}d
+DIST_BACKEND=${DIST_BACKEND:-nccl}
 
 # -------- Helpers --------
 run_main() {
@@ -180,6 +189,29 @@ for step in "${STEPS[@]}"; do
       echo "reg,step,fid,precision,recall,density,coverage,is_mean,is_std" > "$CSV_OUT"
       parse_eval_to_csv_row "$EVAL_TXT" "$reg" "$step" >> "$CSV_OUT"
     fi
+
+    FEATURE_EVAL_TXT="$REG_LOG_DIR/eval_feature_space_ckpt_${step}.txt"
+    python "$FEATURE_EVAL_SCRIPT" \
+      --image_size "$IMAGE_SIZE" \
+      --real_dir "$REAL_DIR" \
+      --gen_dir "$GEN_DIR" | tee "$FEATURE_EVAL_TXT"
+
+    FEATURE_CSV_OUT="$REG_LOG_DIR/eval_feature_space_summary.csv"
+    # Add an empty FID value to historical rows written before FID was included.
+    if [ -f "$FEATURE_CSV_OUT" ] && [ "$(head -n 1 "$FEATURE_CSV_OUT")" = "reg,step,precision,recall,density,coverage" ]; then
+      FEATURE_CSV_TMP=$(mktemp "${FEATURE_CSV_OUT}.XXXXXX")
+      awk -F, 'BEGIN { OFS="," }
+        NR == 1 { print "reg,step,fid,precision,recall,density,coverage"; next }
+        { print $1,$2,"NA",$3,$4,$5,$6 }
+      ' "$FEATURE_CSV_OUT" > "$FEATURE_CSV_TMP"
+      mv "$FEATURE_CSV_TMP" "$FEATURE_CSV_OUT"
+    fi
+    if [ ! -f "$FEATURE_CSV_OUT" ]; then
+      echo "reg,step,fid,precision,recall,density,coverage" > "$FEATURE_CSV_OUT"
+    fi
+    # Retain FID and PRDC fields; this evaluator does not calculate IS.
+    parse_eval_to_csv_row "$FEATURE_EVAL_TXT" "$reg" "$step" \
+      | cut -d, -f1-7 >> "$FEATURE_CSV_OUT"
 
     rm -f "configs/$TMP_CFG_NAME"
   done
