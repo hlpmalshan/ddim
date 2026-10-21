@@ -19,3 +19,4 @@ Transient_Results/**/t_*
 transient_other/**/t_*
 ddim_cifar10_8_9
 ddim_pneumonia
+Covarince_Results
