@@ -1,3 +1,4 @@
+import json
 import argparse
 import traceback
 import shutil
@@ -45,6 +46,24 @@ def parse_args_and_config():
     parser.add_argument(
         "--reg", type=float, required=True, help="Iso Reg", default=0.0
     )
+    ### added
+    parser.add_argument(
+        "--reg_mode", choices=("batch", "per_timestep"), default="batch",
+        help="Energy penalty: original mixed-batch loss (default) or per-timestep loss. "
+             "Per-timestep mode requires model.type: iso and automatically groups timesteps.",
+    )
+    parser.add_argument(
+        "--timestep_groups", type=int, default=4,
+        help="Distinct timesteps per grouped minibatch (default: 4). "
+             "Batch size is per GPU under DDP; each group must contain a sample.",
+    )
+    parser.add_argument(
+        "--grouped_timesteps", action="store_true",
+        help="Use grouped sampling with the original loss as a sampling-matched control. "
+             "Enabled automatically by --reg_mode per_timestep.",
+    )
+    ####
+    
     parser.add_argument("--test", action="store_true", help="Whether to test the model")
     parser.add_argument(
         "--sample",
@@ -69,6 +88,12 @@ def parse_args_and_config():
         help="No interaction. Suitable for Slurm Job launcher",
     )
     parser.add_argument("--use_pretrained", action="store_true")
+    parser.add_argument("--r_theta_outdir", default=None,
+                        help="Save full-DDPM r_theta using the loaded sampling model")
+    parser.add_argument("--r_theta_num_images", type=int, default=10000)
+    parser.add_argument("--r_theta_batch_size", type=int, default=256)
+    parser.add_argument("--r_theta_timestamps", default="auto")
+
     parser.add_argument(
         "--sample_type",
         type=str,
@@ -127,6 +152,10 @@ def parse_args_and_config():
     )
     
     args = parser.parse_args()
+    #### added
+    if args.timestep_groups < 1:
+        parser.error("--timestep_groups must be at least 1")
+    ####
     args.log_path = os.path.join(args.exp, "logs", args.doc)
 
     # Parse intermediate_timesteps into a sorted list of integers
@@ -141,6 +170,15 @@ def parse_args_and_config():
         config = yaml.safe_load(f)
     new_config = dict2namespace(config)
 
+    if args.reg_mode == "per_timestep" and new_config.model.type != "iso":
+            parser.error("--reg_mode per_timestep requires model.type: iso in the YAML")
+    if args.reg_mode == "per_timestep":
+        args.grouped_timesteps = True
+    if args.grouped_timesteps and args.timestep_groups > min(
+        new_config.training.batch_size, new_config.diffusion.num_diffusion_timesteps
+    ):
+        parser.error("--timestep_groups cannot exceed batch_size or diffusion timesteps")
+    
     tb_path = os.path.join(args.exp, "tensorboard", args.doc)
     os.makedirs(tb_path, exist_ok=True)
 
@@ -323,6 +361,18 @@ def main():
     logging.info("Exp instance id = {}".format(os.getpid()))
     logging.info("Exp comment = {}".format(args.comment))
 
+    #### added
+    if not args.sample and not args.test:
+        logging.info(
+            "Regularization: mode=%s, lambda=%g, grouped_timesteps=%s, timestep_groups=%d",
+            args.reg_mode, args.reg, args.grouped_timesteps, args.timestep_groups,
+        )
+        if getattr(config, "rank", 0) == 0:
+            options_path = "training_args_resume.json" if args.resume_training else "training_args.json"
+            with open(os.path.join(args.log_path, options_path), "w") as f:
+                json.dump(vars(args), f, indent=2)
+    ######
+
     try:
         runner = Diffusion(args, config, device=config.device)
         if args.sample:
@@ -333,6 +383,7 @@ def main():
             runner.train()
     except Exception:
         logging.error(traceback.format_exc())
+        return 1
     finally:
         if getattr(config, "distributed", False) and dist.is_available() and dist.is_initialized():
             dist.destroy_process_group()
