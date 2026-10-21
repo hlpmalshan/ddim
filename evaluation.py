@@ -1,7 +1,6 @@
 import os
 import argparse
 import glob
-import shutil
 import tempfile
 from PIL import Image
 from tqdm import tqdm
@@ -16,44 +15,42 @@ from prdc import compute_prdc
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="torch_fidelity")
 
-# -------- Clean images: remove non-images, corrupted files, convert to RGB --------
+# -------- Validate inputs without modifying source images --------
 def clean_image_dir(img_dir):
-    valid_exts = [".jpg", ".jpeg", ".png"]
-    files = glob.glob(os.path.join(img_dir, "*"))
-    for f in files:
-        ext = os.path.splitext(f)[1].lower()
-        if ext not in valid_exts:
-            print(f"Removing non-image file: {f}")
-            os.remove(f)
+    if not os.path.isdir(img_dir):
+        raise ValueError(
+            f"Image directory does not exist: {img_dir}. "
+            "For CIFAR-10, run python cifar10_batch_to_image.py to export the batch files first."
+        )
+    files = []
+    for path in sorted(glob.glob(os.path.join(img_dir, "*"))):
+        if not os.path.isfile(path) or os.path.splitext(path)[1].lower() not in {".jpg", ".jpeg", ".png"}:
             continue
         try:
-            img = Image.open(f)
-            img = img.convert("RGB")  # enforce RGB
-            img.verify()  # check corruption
-        except Exception:
-            print(f"Removing corrupted file: {f}")
-            os.remove(f)
+            with Image.open(path) as img:
+                img.verify()
+            files.append(path)
+        except (OSError, ValueError):
+            print(f"Skipping corrupted image: {path}")
+    if not files:
+        raise ValueError(f"No valid PNG/JPEG images found directly in {img_dir}")
+    return files
 
-# -------- Prepare resized copy with torchvision transforms (resize shorter side + center crop) --------
-def prepare_resized_copy(src_dir, size=32):
-    tmp_dir = tempfile.mkdtemp()
+
+# -------- Prepare resized copies of the selected images --------
+def prepare_resized_copy(files, dst_dir, size=32):
     transform = transforms.Compose([
-        transforms.Resize(size),          # shorter side resized to 299
-        transforms.CenterCrop(size),      # center crop 299x299
+        transforms.Resize(size),
+        transforms.CenterCrop(size),
     ])
-    for f in tqdm(glob.glob(os.path.join(src_dir, "*")), desc=f"Processing images in {src_dir}"):
-        try:
-            img = Image.open(f).convert("RGB")
-            img = transform(img)
-            img.save(os.path.join(tmp_dir, os.path.basename(f)))
-        except Exception:
-            print(f"Skipping invalid file: {f}")
-    return tmp_dir
+    for index, path in enumerate(tqdm(files, desc="Preparing images")):
+        with Image.open(path) as img:
+            transform(img.convert("RGB")).save(os.path.join(dst_dir, f"{index}.png"))
 
 # -------- Dataset for PRDC --------
 class ImageDataset(Dataset):
     def __init__(self, root, transform=None):
-        self.paths = sorted(glob.glob(os.path.join(root, "*")))
+        self.paths = list(root)
         self.transform = transform
 
     def __len__(self):
@@ -69,43 +66,37 @@ class ImageDataset(Dataset):
 def extract_rgb_features(dataloader):
     imgs_list = []
     for imgs, _ in tqdm(dataloader, desc="Collecting RGB images for PRDC"):
-        # imgs: float tensor [B,C,H,W] in [0,1]
-        imgs_uint8 = (imgs * 255).to(torch.uint8)
+        # PILToTensor supplies uint8 pixels [B,C,H,W] in [0,255].
+        imgs_uint8 = imgs.to(torch.uint8)
         imgs_np = imgs_uint8.permute(0, 2, 3, 1).cpu().numpy()  # B,H,W,C uint8
         imgs_list.append(imgs_np)
     return np.concatenate(imgs_list, axis=0)
 
 # -------- Main --------
 def main(real_dir, gen_dir, batch_size=32, device='cuda:1' if torch.cuda.is_available() else 'cpu', image_size=32):
-    print("[Cleaning image directories]")
-    clean_image_dir(real_dir)
-    clean_image_dir(gen_dir)
+    print("[Validating image directories]")
+    real_files = clean_image_dir(real_dir)
+    gen_files = clean_image_dir(gen_dir)
+    count = min(len(real_files), len(gen_files))
+    if count <= 5:
+        raise ValueError(f"PRDC with nearest_k=5 requires at least 6 images per set; got {count}")
+    real_files = real_files[:count]
+    gen_files = gen_files[:count]
+    print(f"Images per set: {count}")
 
-    # Ensure equal number of images in both dirs
-    real_files = sorted(glob.glob(os.path.join(real_dir, "*")))
-    gen_files = sorted(glob.glob(os.path.join(gen_dir, "*")))
-    if len(gen_files) > len(real_files):
-        gen_files = gen_files[:len(real_files)]
-        # optionally remove the extras from disk so following code sees equal sets
-        for f in sorted(glob.glob(os.path.join(gen_dir, "*")))[len(real_files):]:
-            os.remove(f)
-    
-    if len(real_files) > len(gen_files):
-        real_files = real_files[:len(gen_files)]
-    
-    print("[Preparing resized copies for FID/IS]")
-    real_tmp = prepare_resized_copy(real_dir, size=image_size)
-    gen_tmp = prepare_resized_copy(gen_dir, size=image_size)
-    
-    print("[Calculating FID and IS with torch-fidelity]")
-    metrics = torch_fidelity.calculate_metrics(
-        input1=gen_tmp,
-        input2=real_tmp,
-        cuda=torch.cuda.is_available(),
-        fid=True,
-        isc=True,
-        verbose=False
-    )
+    with tempfile.TemporaryDirectory() as real_tmp, tempfile.TemporaryDirectory() as gen_tmp:
+        print("[Preparing resized copies for FID/IS]")
+        prepare_resized_copy(real_files, real_tmp, size=image_size)
+        prepare_resized_copy(gen_files, gen_tmp, size=image_size)
+        print("[Calculating FID and IS with torch-fidelity]")
+        metrics = torch_fidelity.calculate_metrics(
+            input1=gen_tmp,
+            input2=real_tmp,
+            cuda=torch.cuda.is_available(),
+            fid=True,
+            isc=True,
+            verbose=False
+        )
     fid_score = metrics['frechet_inception_distance']
     is_mean = metrics['inception_score_mean']
     is_std = metrics['inception_score_std']
@@ -114,17 +105,15 @@ def main(real_dir, gen_dir, batch_size=32, device='cuda:1' if torch.cuda.is_avai
     print(f"FID: {fid_score:.4f}")
     print(f"Inception Score: {is_mean:.4f} ± {is_std:.4f}")
 
-    shutil.rmtree(real_tmp)
-    shutil.rmtree(gen_tmp)
 
     print("[Calculating PRDC metrics with raw RGB images]")
     prdc_transform = transforms.Compose([
         transforms.Resize(image_size),
         transforms.CenterCrop(image_size),
-        transforms.PILToTensor(),  # float tensor in [0,1]
+        transforms.PILToTensor(),  # uint8 tensor in [0,255]
     ])
-    ds_real = ImageDataset(real_dir, prdc_transform)
-    ds_gen = ImageDataset(gen_dir, prdc_transform)
+    ds_real = ImageDataset(real_files, prdc_transform)
+    ds_gen = ImageDataset(gen_files, prdc_transform)
     dl_real = DataLoader(ds_real, batch_size=batch_size, shuffle=False)
     dl_gen = DataLoader(ds_gen, batch_size=batch_size, shuffle=False)
 
@@ -145,8 +134,8 @@ def main(real_dir, gen_dir, batch_size=32, device='cuda:1' if torch.cuda.is_avai
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Calculate FID, IS, PRDC metrics on image directories")
-    parser.add_argument("--real_dir", type=str, help="Directory with real images")
-    parser.add_argument("--gen_dir", type=str, help="Directory with generated images")
+    parser.add_argument("--real_dir", type=str, required=True, help="Directory with real images")
+    parser.add_argument("--gen_dir", type=str, required=True, help="Directory with generated images")
     parser.add_argument("--image_size", type=int, default=32, help="Image resolution (eg. 32 or 64)")
     args = parser.parse_args()
-    main(args.real_dir, args.gen_dir, args.image_size)
+    main(args.real_dir, args.gen_dir, image_size=args.image_size)
