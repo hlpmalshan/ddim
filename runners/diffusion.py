@@ -17,6 +17,7 @@ from models.diffusion import Model
 from models.ema import EMAHelper
 from functions import get_optimizer
 from functions.losses import loss_registry
+from functions.trace_energy import sample_grouped_timesteps
 from datasets import get_dataset, data_transform, inverse_data_transform
 from functions.ckpt_util import get_ckpt_path
 
@@ -223,13 +224,39 @@ class Diffusion(object):
                 e = torch.randn_like(x)
                 b = self.betas
 
-                # antithetic sampling
-                t = torch.randint(
-                    low=0, high=self.num_timesteps, size=(n // 2 + 1,)
-                ).to(self.device)
-                t = torch.cat([t, self.num_timesteps - t - 1], dim=0)[:n]
-                # loss, batch_norm_mean, batch_norm_standard_deviation = loss_registry[config.model.type](model, x, t, e, b, reg=args.reg, weighting_type=args.weighting_type, snr_gamma=config.model.snr_gamma)
-                loss, batch_norm_mean, batch_norm_standard_deviation = loss_registry[config.model.type](model, x, t, e, b, reg=args.reg)
+                # original
+                # # antithetic sampling
+                # t = torch.randint(
+                #     low=0, high=self.num_timesteps, size=(n // 2 + 1,)
+                # ).to(self.device)
+                # t = torch.cat([t, self.num_timesteps - t - 1], dim=0)[:n]
+                # # loss, batch_norm_mean, batch_norm_standard_deviation = loss_registry[config.model.type](model, x, t, e, b, reg=args.reg, weighting_type=args.weighting_type, snr_gamma=config.model.snr_gamma)
+                # loss, batch_norm_mean, batch_norm_standard_deviation = loss_registry[config.model.type](model, x, t, e, b, reg=args.reg)
+
+                #### added
+                if getattr(args, "grouped_timesteps", False) or getattr(args, "reg_mode", "batch") == "per_timestep":
+                    t = sample_grouped_timesteps(
+                        n, self.num_timesteps, getattr(args, "timestep_groups", 4),
+                        self.device, sync_distributed=is_distributed,
+                    )
+                else:
+                    # Original antithetic sampling, unchanged in default mode.
+                    t = torch.randint(
+                        low=0, high=self.num_timesteps, size=(n // 2 + 1,)
+                    ).to(self.device)
+                    t = torch.cat([t, self.num_timesteps - t - 1], dim=0)[:n]
+                
+                energy_details = None
+                if getattr(args, "reg_mode", "batch") == "per_timestep":
+                    if config.model.type != "iso":
+                        raise ValueError("per_timestep mode requires model.type: iso")
+                    loss, batch_norm_mean, batch_norm_standard_deviation, energy_details = loss_registry["iso_per_timestep"](
+                        model, x, t, e, b, reg=args.reg,
+                        sync_distributed=is_distributed, return_details=True,
+                    )
+                else:
+                    loss, batch_norm_mean, batch_norm_standard_deviation = loss_registry[config.model.type](model, x, t, e, b, reg=args.reg)
+                ######
 
                 reduced_loss = loss.detach()
                 if is_distributed:
@@ -239,6 +266,24 @@ class Diffusion(object):
 
                 if tb_logger is not None and is_main_process:
                     tb_logger.add_scalar("loss", reduced_loss.item(), global_step=step)
+                    ##### added
+                    if energy_details is not None:
+                        tb_logger.add_scalar("regularization/energy_loss", energy_details["energy_loss"].item(), step)
+                        tb_logger.add_scalar("regularization/weighted_energy_loss", args.reg * energy_details["energy_loss"].item(), step)
+                    #####
+
+                ##### added
+                if energy_details is not None and (step == 1 or step % 100 == 0) and is_main_process:
+                    # Counts and energies are global under DDP, even on rank zero.
+                    energy_path = os.path.join(args.log_path, "trace_energy_by_timestep.csv")
+                    energy_rows = pd.DataFrame({
+                        "step": step,
+                        "timestep": energy_details["timesteps"].cpu().numpy(),
+                        "energy": energy_details["energies"].cpu().numpy(),
+                        "sample_count": energy_details["counts"].cpu().numpy().astype(int),
+                    })
+                    energy_rows.to_csv(energy_path, mode="a", header=not os.path.exists(energy_path), index=False)
+                #####
 
                 if is_main_process:
                     logging.info(
@@ -345,6 +390,19 @@ class Diffusion(object):
             model.to(self.device)
 
         model.eval()
+
+        # if getattr(self.args, "r_theta_outdir", None):
+        #     if getattr(self.config, "rank", 0) == 0:
+        #         from transient_r_theta_cifar10_ddpm_sampling import save_r_theta
+
+        #         save_r_theta(
+        #             model, self.betas, self.config, self.args.r_theta_outdir,
+        #             num_images_per_t=self.args.r_theta_num_images,
+        #             batch_size=self.args.r_theta_batch_size,
+        #             timestamps_arg=self.args.r_theta_timestamps,
+        #         )
+        if is_distributed and dist.is_available() and dist.is_initialized():
+            dist.barrier()
 
         if self.args.fid:
             self.sample_fid(model)
