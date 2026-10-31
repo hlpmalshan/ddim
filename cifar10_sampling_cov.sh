@@ -44,7 +44,7 @@ FEATURE_EVAL_SCRIPT="evaluation_feature_space.py"
 COV_SCRIPT="transient_covarince_cifar10_ddpm_save.py"
 
 # Sampling params (single GPU)
-NUM_IMAGES=${NUM_IMAGES:-10000}
+NUM_IMAGES=${NUM_IMAGES:-50000}
 SAMPLE_BATCH=${SAMPLE_BATCH:-256}
 GPU_ID=${GPU_ID:-1}
 
@@ -104,8 +104,11 @@ for step in "${STEPS[@]}"; do
     fi
 
     # Separate names from cifar10_sampling.sh so the two never mix.
-    GEN_DIR="$GEN_BASE/cifar10_iso_${reg}_s${step}_cov"
-    COV_OUT="$REG_LOG_DIR/covariance_ckpt_${step}"
+    TAG="_n${NUM_IMAGES}"
+    GEN_DIR="$GEN_BASE/cifar10_iso_${reg}_s${step}_cov${TAG}"
+    COV_OUT="$REG_LOG_DIR/covariance_ckpt_${step}${TAG}"
+    #GEN_DIR="$GEN_BASE/cifar10_iso_${reg}_s${step}_cov"
+    #COV_OUT="$REG_LOG_DIR/covariance_ckpt_${step}"
 
     # 1) Sampling + covariance in one pass. Skipped when already complete; an
     #    interrupted run restarts this checkpoint from scratch (images included).
@@ -128,7 +131,7 @@ for step in "${STEPS[@]}"; do
 
     # 2) Evaluation on the images from step 1 (written to .tmp first, so an
     #    interrupted evaluation is redone on the next run).
-    EVAL_TXT="$REG_LOG_DIR/eval_cov_ckpt_${step}.txt"
+    EVAL_TXT="$REG_LOG_DIR/eval_cov_ckpt_${step}${TAG}.txt"
     if [ ! -f "$EVAL_TXT" ]; then
       echo "--- Evaluating: reg=$reg, step=$step ---"
       python "$EVAL_SCRIPT" \
@@ -137,14 +140,14 @@ for step in "${STEPS[@]}"; do
         --gen_dir  "$GEN_DIR" | tee "$EVAL_TXT.tmp"
       mv "$EVAL_TXT.tmp" "$EVAL_TXT"
 
-      CSV_OUT="$REG_LOG_DIR/eval_cov_summary.csv"
+      CSV_OUT="$REG_LOG_DIR/eval_cov${TAG}_summary.csv"
       if [ ! -f "$CSV_OUT" ]; then
         echo "reg,step,fid,precision,recall,density,coverage,is_mean,is_std" > "$CSV_OUT"
       fi
       parse_eval_to_csv_row "$EVAL_TXT" "$reg" "$step" >> "$CSV_OUT"
     fi
 
-    FEATURE_EVAL_TXT="$REG_LOG_DIR/eval_feature_space_cov_ckpt_${step}.txt"
+    FEATURE_EVAL_TXT="$REG_LOG_DIR/eval_feature_space_cov_ckpt_${step}${TAG}.txt"
     if [ ! -f "$FEATURE_EVAL_TXT" ]; then
       python "$FEATURE_EVAL_SCRIPT" \
         --image_size "$IMAGE_SIZE" \
@@ -152,7 +155,7 @@ for step in "${STEPS[@]}"; do
         --gen_dir "$GEN_DIR" | tee "$FEATURE_EVAL_TXT.tmp"
       mv "$FEATURE_EVAL_TXT.tmp" "$FEATURE_EVAL_TXT"
 
-      FEATURE_CSV_OUT="$REG_LOG_DIR/eval_feature_space_cov_summary.csv"
+      FEATURE_CSV_OUT="$REG_LOG_DIR/eval_feature_space_cov${TAG}_summary.csv"
       if [ ! -f "$FEATURE_CSV_OUT" ]; then
         echo "reg,step,fid,precision,recall,density,coverage" > "$FEATURE_CSV_OUT"
       fi
